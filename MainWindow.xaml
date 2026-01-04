@@ -1,0 +1,178 @@
+﻿<Window x:Class="Learning_Management_System.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:local="clr-namespace:Learning_Management_System"
+        xmlns:helpers="clr-namespace:Learning_Management_System.Helpers"
+        Title="ScholarFlow" Height="650" Width="1000"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{md:MaterialDesignFont}">
+
+    <Window.Resources>
+        <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <helpers:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <Style x:Key="ActionButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+            <Setter Property="Margin" Value="0,0,10,0"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <TabControl TabStripPlacement="Left" Style="{DynamicResource MaterialDesignNavigationRailTabControl}">
+
+            <TabItem IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                <TabItem.Header>
+                    <StackPanel Margin="5">
+                        <md:PackIcon Kind="Account" HorizontalAlignment="Center" Width="24" Height="24"/>
+                        <TextBlock Text="UCZNIOWIE" HorizontalAlignment="Center" FontSize="10"/>
+                    </StackPanel>
+                </TabItem.Header>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="250"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <DockPanel Grid.Column="0" Margin="10" 
+                               IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                        <TextBlock Text="Lista Uczniów" DockPanel.Dock="Top" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <Button Content="Dodaj Ucznia" DockPanel.Dock="Bottom" Command="{Binding AddStudentCommand}" Style="{DynamicResource MaterialDesignRaisedButton}"/>
+
+                        <ListBox ItemsSource="{Binding Students}" 
+                                 SelectedItem="{Binding SelectedStudent}"
+                                 Background="Transparent" BorderThickness="0"
+                                 HorizontalContentAlignment="Stretch" Margin="0,10">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" Margin="2"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+
+                    <Grid Grid.Column="1" Margin="20">
+                        <TextBlock Text="Wybierz ucznia z listy lub dodaj nowego" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"
+                                   Visibility="{Binding SelectedStudent, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverted}"/>
+
+                        <StackPanel Visibility="{Binding SelectedStudent, Converter={StaticResource NullToVisibilityConverter}}">
+                            <DockPanel LastChildFill="False" Margin="0,0,0,20">
+                                <TextBlock Text="Dane szczegółowe" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <Button DockPanel.Dock="Right" Content="Usuń" Command="{Binding DeleteStudentCommand}" 
+                                        Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red"/>
+                            </DockPanel>
+
+                            <Label Content="Imię:"/>
+                            <TextBox Text="{Binding SelectedStudent.FirstName, UpdateSourceTrigger=PropertyChanged}" 
+                                     Margin="0,0,0,10" md:TextFieldAssist.HasClearButton="True"/>
+
+                            <Label Content="Nazwisko:"/>
+                            <TextBox Text="{Binding SelectedStudent.LastName, UpdateSourceTrigger=PropertyChanged}" 
+                                     Margin="0,0,0,10" md:TextFieldAssist.HasClearButton="True"/>
+
+                            <Label Content="Telefon:"/>
+                            <TextBox Text="{Binding SelectedStudent.PhoneNumber, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+
+                            <Label Content="E-mail:"/>
+                            <TextBox Text="{Binding SelectedStudent.Email, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,20"/>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Zapisz zmiany" Command="{Binding SaveStudentCommand}" Style="{StaticResource ActionButtonStyle}"/>
+                                <Button Content="Anuluj" Command="{Binding CancelStudentCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        Visibility="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                <TabItem.Header>
+                    <StackPanel Margin="5">
+                        <md:PackIcon Kind="AccountGroup" HorizontalAlignment="Center" Width="24" Height="24"/>
+                        <TextBlock Text="GRUPY" HorizontalAlignment="Center" FontSize="10"/>
+                    </StackPanel>
+                </TabItem.Header>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="250"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <DockPanel Grid.Column="0" Margin="10"
+                               IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                        <TextBlock Text="Lista Grup" DockPanel.Dock="Top" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <Button Content="Dodaj Grupę" DockPanel.Dock="Bottom" Command="{Binding AddGroupCommand}" Style="{DynamicResource MaterialDesignRaisedButton}"/>
+
+                        <ListBox ItemsSource="{Binding Groups}" 
+                                 SelectedItem="{Binding SelectedGroup}"
+                                 Background="Transparent" BorderThickness="0"
+                                 HorizontalContentAlignment="Stretch" Margin="0,10">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="2"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+
+                    <Grid Grid.Column="1" Margin="20">
+                        <TextBlock Text="Wybierz grupę z listy" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"
+                                   Visibility="{Binding SelectedGroup, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverted}"/>
+
+                        <StackPanel Visibility="{Binding SelectedGroup, Converter={StaticResource NullToVisibilityConverter}}">
+                            <TextBox Text="{Binding SelectedGroup.Name, UpdateSourceTrigger=PropertyChanged}" 
+                                     FontSize="18" FontWeight="Bold" md:HintAssist.Hint="Nazwa grupy" Margin="0,0,0,20"/>
+
+                            <Label Content="Stawka podstawowa (PLN):"/>
+                            <TextBox Text="{Binding SelectedGroup.BaseRate, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
+
+                            <Expander Header="Uczniowie w tej grupie" IsExpanded="True" Margin="0,10,0,0">
+                                <StackPanel Margin="10">
+                                    <StackPanel Visibility="{Binding IsEditingMembers, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                                        <ListBox ItemsSource="{Binding GroupMembers}" MaxHeight="150">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding FullName}"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <Button Content="Zarządzaj listą uczniów" 
+                                                Command="{Binding StartEditMembersCommand}" 
+                                                Style="{DynamicResource MaterialDesignFlatButton}" Margin="0,10,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Visibility="{Binding IsEditingMembers, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBox md:HintAssist.Hint="Szukaj ucznia do dodania..." 
+                                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,0,0,10"/>
+
+                                        <ListBox ItemsSource="{Binding AllStudentsSelection}" MaxHeight="250">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Student.FullName}"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                                            <Button Content="Anuluj" Command="{Binding CancelEditMembersCommand}" 
+                                                    Style="{DynamicResource MaterialDesignFlatButton}" Foreground="Red"/>
+                                            <Button Content="Zatwierdź listę" Command="{Binding SaveMembersCommand}" 
+                                                    Style="{DynamicResource MaterialDesignFlatButton}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Expander>
+
+                            <Button Content="Zapisz dane grupy" Command="{Binding SaveGroupCommand}" 
+                                    HorizontalAlignment="Left" Margin="0,20,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>
