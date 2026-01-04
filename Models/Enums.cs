@@ -6,7 +6,7 @@ namespace Learning_Management_System.Models
         {
             Scheduled,
             Completed,
-            Cancelled,
+            Canceled,
             Holiday,
         }
 

@@ -25,7 +25,10 @@ namespace Learning_Management_System.Helpers
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return value is Visibility v && v == Visibility.Visible;
+            bool bValue = value is Visibility v && v == Visibility.Visible;
+            if (parameter?.ToString() == "Inverted")
+                return !bValue;
+            return bValue;
         }
     }
 }
