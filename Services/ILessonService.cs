@@ -11,9 +11,8 @@ namespace Learning_Management_System.Services
         Task AddLessonAsync(Lesson lesson);
         Task UpdateLessonAsync(Lesson lesson);
         Task DeleteLessonAsync(int lessonId);
-
-        // Metody wspierające Inteligentną Synchronizację (Opcja B)
-        IEnumerable<Lesson> GetFutureLessonsBySchedule(int scheduleId);
-        bool LessonExists(int groupId, int scheduleId, DateTime startTime);
+        Task SyncLessonsWithScheduleAsync(Group group);
+        Task<IEnumerable<Lesson>> GetFutureLessonsByScheduleAsync(int scheduleId); // Nazwa z Async
+        Task<bool> LessonExistsAsync(int groupId, int scheduleId, DateTime startTime);
     }
 }

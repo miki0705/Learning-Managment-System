@@ -34,7 +34,6 @@ namespace Learning_Management_System.Services
 
         public async Task UpdateLessonAsync(Lesson lesson)
         {
-            // Sprawdzamy, czy obiekt jest już śledzony przez EF
             var trackedEntity = _context.Lessons.Local.FirstOrDefault(l => l.Id == lesson.Id);
             if (trackedEntity != null)
             {
@@ -55,18 +54,70 @@ namespace Learning_Management_System.Services
             }
         }
 
-        // Pobiera lekcje, które mają się odbyć w przyszłości dla konkretnego wpisu w grafiku
-        public IEnumerable<Lesson> GetFutureLessonsBySchedule(int scheduleId)
+        public async Task SyncLessonsWithScheduleAsync(Group group)
         {
-            return _context.Lessons
-                .Where(l => l.GroupScheduleId == scheduleId && l.StartTime > DateTime.Now)
-                .ToList();
+            if (group == null || group.Schedules == null) return;
+
+            int weeksToGenerate = 10;
+            DateTime startDate = DateTime.Today;
+
+            foreach (var schedule in group.Schedules)
+            {
+                // 1. POBIERZ I USUŃ wszystkie przyszłe lekcje powiązane z tym grafikiem, 
+                //    które nie zostały jeszcze "zrealizowane" (np. status Scheduled).
+                //    To zapobiega duplikatom przy zmianie godziny/dnia.
+                var futureLessons = await _context.Lessons
+                    .Where(l => l.GroupScheduleId == schedule.Id &&
+                                l.StartTime >= startDate &&
+                                l.Status == LessonStatus.Scheduled)
+                    .ToListAsync();
+
+                if (futureLessons.Any())
+                {
+                    _context.Lessons.RemoveRange(futureLessons);
+                    // Zapisujemy zmiany od razu, aby LessonExists nie widział usuwanych lekcji
+                    await _context.SaveChangesAsync();
+                }
+
+                // 2. GENERUJ LEKCJE NA NOWO według zaktualizowanego grafiku
+                for (int i = 0; i < weeksToGenerate; i++)
+                {
+                    DateTime lessonDate = startDate.AddDays(i * 7);
+                    int daysUntilNextDay = ((int)schedule.DayOfWeek - (int)lessonDate.DayOfWeek + 7) % 7;
+                    lessonDate = lessonDate.AddDays(daysUntilNextDay);
+
+                    DateTime finalStart = lessonDate.Date.Add(schedule.StartTime.TimeOfDay);
+                    DateTime finalEnd = lessonDate.Date.Add(schedule.EndTime.TimeOfDay);
+
+                    // Sprawdzamy czy lekcja już istnieje (na wypadek gdyby 
+                    // użytkownik dodał coś ręcznie o tej samej porze)
+                    if (!await LessonExistsAsync(group.Id, schedule.Id, finalStart))
+                    {
+                        _context.Lessons.Add(new Lesson
+                        {
+                            GroupId = group.Id,
+                            GroupScheduleId = schedule.Id,
+                            StartTime = finalStart,
+                            EndTime = finalEnd,
+                            Status = LessonStatus.Scheduled,
+                            Note = "Lekcja generowana automatycznie"
+                        });
+                    }
+                }
+            }
+            await _context.SaveChangesAsync();
         }
 
-        // Sprawdza, czy lekcja o takich parametrach już istnieje, by uniknąć duplikatów
-        public bool LessonExists(int groupId, int scheduleId, DateTime startTime)
+        public async Task<IEnumerable<Lesson>> GetFutureLessonsByScheduleAsync(int scheduleId)
         {
-            return _context.Lessons.Any(l =>
+            return await _context.Lessons
+                .Where(l => l.GroupScheduleId == scheduleId && l.StartTime > DateTime.Now)
+                .ToListAsync();
+        }
+
+        public async Task<bool> LessonExistsAsync(int groupId, int scheduleId, DateTime startTime)
+        {
+            return await _context.Lessons.AnyAsync(l =>
                 l.GroupId == groupId &&
                 l.GroupScheduleId == scheduleId &&
                 l.StartTime == startTime);

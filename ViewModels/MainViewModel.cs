@@ -34,7 +34,7 @@ namespace Learning_Management_System.ViewModels
         private List<StudentSelection> _allStudentsFullList = new();
         #endregion
 
-        #region Właściwości Publiczne (Główne)
+        #region Właściwości Publiczne
         public bool IsDirty
         {
             get => _isDirty;
@@ -52,15 +52,12 @@ namespace Learning_Management_System.ViewModels
             get => _searchText;
             set { _searchText = value; OnPropertyChanged(); ApplyFilter(); }
         }
-        #endregion
 
-        #region Kolekcje Danych
         public ObservableCollection<Student> Students { get; set; }
         public ObservableCollection<Group> Groups { get; set; }
         public ObservableCollection<DayViewModel> WeekDays { get; set; } = new();
         public ObservableCollection<StudentSelection> AllStudentsSelection { get; set; } = new();
 
-        // Źródło danych dla ComboBoxa ze statusami w edycji lekcji
         public IEnumerable<LessonStatus> AllStatuses => Enum.GetValues(typeof(LessonStatus)).Cast<LessonStatus>();
 
         public ObservableCollection<Student> GroupMembers
@@ -74,9 +71,7 @@ namespace Learning_Management_System.ViewModels
             get => _groupSchedules;
             set { _groupSchedules = value; OnPropertyChanged(); }
         }
-        #endregion
 
-        #region Wybrane Obiekty (Selected)
         public Student? SelectedStudent
         {
             get => _selectedStudent;
@@ -116,16 +111,11 @@ namespace Learning_Management_System.ViewModels
             set
             {
                 if (_selectedLesson == value) return;
-                // Odpinamy zdarzenie od starej lekcji
                 if (_selectedLesson != null) _selectedLesson.PropertyChanged -= OnModelPropertyChanged;
-
                 _selectedLesson = value;
-
-                // Podpinamy zdarzenie pod nową lekcję, by zmiany statusu/grupy wyzwalały IsDirty
                 if (_selectedLesson != null) _selectedLesson.PropertyChanged += OnModelPropertyChanged;
 
                 OnPropertyChanged();
-                // Ważne: przy zmianie wyboru lekcji na inną, resetujemy flagę zmian
                 IsDirty = false;
             }
         }
@@ -144,7 +134,6 @@ namespace Learning_Management_System.ViewModels
         public ICommand SaveStudentCommand { get; }
         public ICommand DeleteStudentCommand { get; }
         public ICommand CancelStudentCommand { get; }
-
         public ICommand AddGroupCommand { get; }
         public ICommand SaveGroupCommand { get; }
         public ICommand DeleteGroupCommand { get; }
@@ -152,10 +141,8 @@ namespace Learning_Management_System.ViewModels
         public ICommand StartEditMembersCommand { get; }
         public ICommand SaveMembersCommand { get; }
         public ICommand CancelEditMembersCommand { get; }
-
         public ICommand AddScheduleCommand { get; }
         public ICommand DeleteScheduleCommand { get; }
-
         public ICommand NextWeekCommand { get; }
         public ICommand PreviousWeekCommand { get; }
         public ICommand SelectLessonCommand { get; }
@@ -175,14 +162,14 @@ namespace Learning_Management_System.ViewModels
             _groupMembers = new ObservableCollection<Student>();
             _groupSchedules = new ObservableCollection<GroupSchedule>();
 
-            #region Inicjalizacja Komend
+            // Inicjalizacja Komend
             AddStudentCommand = new RelayCommand(o => AddStudent(), o => !IsDirty);
             SaveStudentCommand = new RelayCommand(o => SaveStudent(), o => IsDirty);
             DeleteStudentCommand = new RelayCommand(o => DeleteStudent(), o => SelectedStudent != null && !IsDirty);
             CancelStudentCommand = new RelayCommand(o => CancelStudentChanges(), o => IsDirty && SelectedStudent != null);
 
             AddGroupCommand = new RelayCommand(o => AddGroup(), o => !IsDirty);
-            SaveGroupCommand = new RelayCommand(o => SaveGroup(), o => IsDirty);
+            SaveGroupCommand = new RelayCommand(async o => await SaveGroupAsync(), o => IsDirty);
             DeleteGroupCommand = new RelayCommand(o => DeleteGroup(), o => SelectedGroup != null && !IsDirty);
             CancelGroupCommand = new RelayCommand(o => CancelGroupChanges(), o => IsDirty && SelectedGroup != null);
 
@@ -191,10 +178,10 @@ namespace Learning_Management_System.ViewModels
             CancelEditMembersCommand = new RelayCommand(o => { IsEditingMembers = false; });
 
             AddScheduleCommand = new RelayCommand(o => AddSchedule(), o => SelectedGroup != null);
-            DeleteScheduleCommand = new RelayCommand(o => DeleteSchedule(o as GroupSchedule), o => o is GroupSchedule);
+            DeleteScheduleCommand = new RelayCommand(async o => await DeleteScheduleAsync(o as GroupSchedule), o => o is GroupSchedule);
 
-            NextWeekCommand = new RelayCommand(o => ChangeWeek(7));
-            PreviousWeekCommand = new RelayCommand(o => ChangeWeek(-7));
+            NextWeekCommand = new RelayCommand(async o => await ChangeWeekAsync(7));
+            PreviousWeekCommand = new RelayCommand(async o => await ChangeWeekAsync(-7));
 
             SelectLessonCommand = new RelayCommand(o => {
                 if (o is Lesson lesson) SelectedLesson = lesson;
@@ -204,7 +191,6 @@ namespace Learning_Management_System.ViewModels
             DeleteLessonCommand = new RelayCommand(async o => await DeleteLessonAsync(), o => SelectedLesson != null);
             SaveLessonCommand = new RelayCommand(async o => await SaveLessonAsync(), o => IsDirty && SelectedLesson != null);
             AddManualLessonCommand = new RelayCommand(o => AddManualLesson());
-            #endregion
 
             SetInitialWeek();
         }
@@ -230,13 +216,17 @@ namespace Learning_Management_System.ViewModels
 
         private void ApplyFilter()
         {
+            // Filtrujemy listę _allStudentsFullList i wynik wrzucamy do AllStudentsSelection (to, co widzi UI)
             var filtered = _allStudentsFullList
                 .Where(s => string.IsNullOrWhiteSpace(SearchText) ||
                             s.Student.FullName.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             AllStudentsSelection.Clear();
-            foreach (var item in filtered) AllStudentsSelection.Add(item);
+            foreach (var item in filtered)
+            {
+                AllStudentsSelection.Add(item);
+            }
         }
         #endregion
 
@@ -305,64 +295,17 @@ namespace Learning_Management_System.ViewModels
             IsDirty = true;
         }
 
-        private void SaveGroup()
+        private async Task SaveGroupAsync()
         {
             if (SelectedGroup == null) return;
-
             if (SelectedGroup.Id == 0) _groupService.AddGroup(SelectedGroup);
             _groupService.SaveChanges();
 
-            SyncLessonsWithSchedule(SelectedGroup);
+            await _lessonService.SyncLessonsWithScheduleAsync(SelectedGroup);
 
             IsDirty = false;
             RefreshList();
-            _ = LoadWeekDataAsync();
-        }
-
-        private void SyncLessonsWithSchedule(Group group)
-        {
-            int weeksToGenerate = 10;
-            DateTime startDate = DateTime.Today;
-
-            foreach (var schedule in group.Schedules)
-            {
-                var lessonsToSync = _lessonService.GetFutureLessonsBySchedule(schedule.Id).ToList();
-
-                foreach (var lesson in lessonsToSync)
-                {
-                    int daysOffset = (int)schedule.DayOfWeek - (int)lesson.StartTime.DayOfWeek;
-                    DateTime newDate = lesson.StartTime.AddDays(daysOffset);
-
-                    lesson.StartTime = newDate.Date.Add(schedule.StartTime);
-                    lesson.EndTime = newDate.Date.Add(schedule.EndTime);
-
-                    _lessonService.UpdateLessonAsync(lesson).Wait();
-                }
-
-                for (int i = 0; i < weeksToGenerate; i++)
-                {
-                    DateTime lessonDate = startDate.AddDays(i * 7);
-                    int daysUntilNextDay = ((int)schedule.DayOfWeek - (int)lessonDate.DayOfWeek + 7) % 7;
-                    lessonDate = lessonDate.AddDays(daysUntilNextDay);
-
-                    DateTime finalStart = lessonDate.Date.Add(schedule.StartTime);
-                    bool exists = _lessonService.LessonExists(group.Id, schedule.Id, finalStart);
-
-                    if (!exists)
-                    {
-                        var newLesson = new Lesson
-                        {
-                            GroupId = group.Id,
-                            GroupScheduleId = schedule.Id,
-                            StartTime = finalStart,
-                            EndTime = lessonDate.Date.Add(schedule.EndTime),
-                            Status = LessonStatus.Scheduled,
-                            Note = "Lekcja generowana automatycznie"
-                        };
-                        _lessonService.AddLessonAsync(newLesson).Wait();
-                    }
-                }
-            }
+            await LoadWeekDataAsync();
         }
 
         private void CancelGroupChanges()
@@ -380,6 +323,8 @@ namespace Learning_Management_System.ViewModels
                 var temp = SelectedGroup;
                 SelectedGroup = null;
                 SelectedGroup = temp;
+                LoadGroupMembers();
+                LoadGroupSchedules();
             }
             _isInternalUpdate = false;
             IsEditingMembers = false;
@@ -417,10 +362,7 @@ namespace Learning_Management_System.ViewModels
         private void LoadGroupSchedules()
         {
             if (GroupSchedules != null)
-            {
-                foreach (var s in GroupSchedules)
-                    s.PropertyChanged -= OnSchedulePropertyChanged;
-            }
+                foreach (var s in GroupSchedules) s.PropertyChanged -= OnSchedulePropertyChanged;
 
             if (SelectedGroup == null)
             {
@@ -429,65 +371,98 @@ namespace Learning_Management_System.ViewModels
             }
 
             GroupSchedules = new ObservableCollection<GroupSchedule>(SelectedGroup.Schedules);
-
-            foreach (var schedule in GroupSchedules)
-            {
-                schedule.PropertyChanged += OnSchedulePropertyChanged;
-            }
+            foreach (var schedule in GroupSchedules) schedule.PropertyChanged += OnSchedulePropertyChanged;
         }
 
         private void AddSchedule()
         {
             if (SelectedGroup == null) return;
-
             var newSchedule = new GroupSchedule
             {
                 GroupId = SelectedGroup.Id,
                 DayOfWeek = DayOfWeek.Monday,
-                StartTime = new TimeSpan(16, 0, 0),
-                EndTime = new TimeSpan(17, 30, 0)
+                StartTime = DateTime.Today.AddHours(16),
+                EndTime = DateTime.Today.AddHours(17).AddMinutes(30)
             };
-
             newSchedule.PropertyChanged += OnSchedulePropertyChanged;
-
             SelectedGroup.Schedules.Add(newSchedule);
             GroupSchedules.Add(newSchedule);
             IsDirty = true;
         }
 
-        private void DeleteSchedule(GroupSchedule? schedule)
+        private async Task DeleteScheduleAsync(GroupSchedule? schedule)
         {
             if (SelectedGroup == null || schedule == null) return;
 
+            var result = MessageBox.Show(
+                "Czy na pewno chcesz usunąć ten termin z grafiku?\nSpowoduje to również usunięcie zaplanowanych przyszłych lekcji.",
+                "Potwierdzenie", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
             schedule.PropertyChanged -= OnSchedulePropertyChanged;
+
+            if (schedule.Id > 0)
+            {
+                // TUTAJ POPRAWKA: Używamy asynchronicznej metody z serwisu
+                var futureLessons = await _lessonService.GetFutureLessonsByScheduleAsync(schedule.Id);
+
+                foreach (var lesson in futureLessons)
+                {
+                    await _lessonService.DeleteLessonAsync(lesson.Id);
+                }
+            }
 
             SelectedGroup.Schedules.Remove(schedule);
             GroupSchedules.Remove(schedule);
+            if (SelectedGroup.Id > 0) _groupService.SaveChanges();
+
+            await LoadWeekDataAsync();
             IsDirty = true;
         }
 
         private void StartEditMembers()
         {
             if (SelectedGroup == null || SelectedGroup.Id == 0) return;
-            _allStudentsFullList.Clear();
-            var currentMemberIds = GroupMembers.Select(s => s.Id).ToList();
-            foreach (var student in Students)
-                _allStudentsFullList.Add(new StudentSelection(student, currentMemberIds.Contains(student.Id)));
 
-            SearchText = "";
+            _allStudentsFullList.Clear();
+
+            // Pobieramy ID aktualnych członków
+            var currentMemberIds = SelectedGroup.Enrollments.Select(e => e.StudentId).ToList();
+
+            foreach (var student in Students)
+            {
+                // Tworzymy listę pomocniczą do filtrowania
+                _allStudentsFullList.Add(new StudentSelection(student, currentMemberIds.Contains(student.Id)));
+            }
+
+            _searchText = string.Empty; // Bezpośrednio do pola, by nie wywołać ApplyFilter za wcześnie
+            OnPropertyChanged(nameof(SearchText));
             ApplyFilter();
+
             IsEditingMembers = true;
-            IsDirty = true;
         }
 
         private void SaveMembers()
         {
             if (SelectedGroup == null) return;
-            var selectedStudents = AllStudentsSelection.Where(s => s.IsSelected).Select(s => s.Student).ToList();
+
+            // Pobieramy zaznaczonych studentów Z CAŁEJ LISTY (nie tylko przefiltrowanej!)
+            var selectedStudents = _allStudentsFullList
+                .Where(s => s.IsSelected)
+                .Select(s => s.Student)
+                .ToList();
+
+            // Wywołujemy synchronizację w serwisie
             _groupService.UpdateGroupMembers(SelectedGroup, selectedStudents);
+
+            // ZAPISUJEMY ZMIANY DO BAZY
+            _groupService.SaveChanges();
+
+            // Odświeżamy widok UI
             LoadGroupMembers();
+
             IsEditingMembers = false;
-            IsDirty = false;
         }
         #endregion
 
@@ -505,7 +480,7 @@ namespace Learning_Management_System.ViewModels
         {
             var lessons = await _lessonService.GetLessonsForDateRangeAsync(_currentWeekStart, _currentWeekStart.AddDays(7));
 
-            Application.Current.Dispatcher.Invoke(() =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 WeekDays.Clear();
                 for (int i = 0; i < 7; i++)
@@ -519,7 +494,7 @@ namespace Learning_Management_System.ViewModels
             });
         }
 
-        private async void ChangeWeek(int days)
+        private async Task ChangeWeekAsync(int days)
         {
             SelectedLesson = null;
             _currentWeekStart = _currentWeekStart.AddDays(days);
@@ -531,23 +506,19 @@ namespace Learning_Management_System.ViewModels
         {
             var newLesson = new Lesson
             {
-                // Domyślna data: dzisiaj o 16:00
                 StartTime = DateTime.Today.AddHours(16),
                 EndTime = DateTime.Today.AddHours(17).AddMinutes(30),
                 Status = LessonStatus.Scheduled,
                 Note = "Nowa lekcja",
-                // Przypisanie grupy, jeśli użytkownik jakąś aktualnie przegląda
                 GroupId = SelectedGroup?.Id ?? (Groups.FirstOrDefault()?.Id ?? 0)
             };
-
             SelectedLesson = newLesson;
-            IsDirty = true; // Pozwala od razu kliknąć "Zapisz"
+            IsDirty = true;
         }
 
         private async Task SaveLessonAsync()
         {
             if (SelectedLesson == null) return;
-
             if (SelectedLesson.Id == 0)
                 await _lessonService.AddLessonAsync(SelectedLesson);
             else
@@ -560,11 +531,10 @@ namespace Learning_Management_System.ViewModels
         private async Task DeleteLessonAsync()
         {
             if (SelectedLesson == null) return;
-            if (MessageBox.Show("Usunąć tę lekcję z kalendarza?", "Potwierdzenie", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBox.Show("Usunąć tę lekcję?", "Potwierdzenie", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 if (SelectedLesson.Id > 0)
                     await _lessonService.DeleteLessonAsync(SelectedLesson.Id);
-
                 SelectedLesson = null;
                 await LoadWeekDataAsync();
             }

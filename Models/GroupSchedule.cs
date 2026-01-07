@@ -16,15 +16,15 @@ namespace Learning_Management_System.Models
             set { _dayOfWeek = value; OnPropertyChanged(); }
         }
 
-        private TimeSpan _startTime;
-        public TimeSpan StartTime
+        private DateTime _startTime = DateTime.Today.AddHours(16);
+        public DateTime StartTime
         {
             get => _startTime;
             set { _startTime = value; OnPropertyChanged(); }
         }
 
-        private TimeSpan _endTime;
-        public TimeSpan EndTime
+        private DateTime _endTime = DateTime.Today.AddHours(17);
+        public DateTime EndTime
         {
             get => _endTime;
             set { _endTime = value; OnPropertyChanged(); }

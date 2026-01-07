@@ -4,11 +4,13 @@
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:Learning_Management_System"
         xmlns:helpers="clr-namespace:Learning_Management_System.Helpers"
-        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime" 
         Title="ScholarFlow" Height="850" Width="1200"
+        WindowStartupLocation="CenterScreen"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         Background="{DynamicResource MaterialDesignPaper}"
-        FontFamily="{md:MaterialDesignFont}">
+        FontFamily="{md:MaterialDesignFont}"
+        xml:lang="pl-PL">
 
     <Window.Resources>
         <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
@@ -35,22 +37,16 @@
                         <TextBlock Text="UCZNIOWIE" HorizontalAlignment="Center" FontSize="10"/>
                     </StackPanel>
                 </TabItem.Header>
-
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="250"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <DockPanel Grid.Column="0" Margin="10" 
-                               IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                    <DockPanel Grid.Column="0" Margin="10" IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
                         <TextBlock Text="Lista Uczniów" DockPanel.Dock="Top" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
                         <Button Content="Dodaj Ucznia" DockPanel.Dock="Bottom" Command="{Binding AddStudentCommand}" Style="{DynamicResource MaterialDesignRaisedButton}"/>
-
-                        <ListBox ItemsSource="{Binding Students}" 
-                                 SelectedItem="{Binding SelectedStudent}"
-                                 Background="Transparent" BorderThickness="0"
-                                 HorizontalContentAlignment="Stretch" Margin="0,10">
+                        <ListBox ItemsSource="{Binding Students}" SelectedItem="{Binding SelectedStudent}" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch" Margin="0,10">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding FullName}" FontWeight="SemiBold" Margin="2"/>
@@ -60,33 +56,27 @@
                     </DockPanel>
 
                     <Grid Grid.Column="1" Margin="20">
-                        <TextBlock Text="Wybierz ucznia z listy lub dodaj nowego" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"
-                                   Visibility="{Binding SelectedStudent, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverted}"/>
+                        <TextBlock Text="Wybierz ucznia z listy lub dodaj nowego" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray" Visibility="{Binding SelectedStudent, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverted}"/>
 
                         <StackPanel Visibility="{Binding SelectedStudent, Converter={StaticResource NullToVisibilityConverter}}">
                             <DockPanel LastChildFill="False" Margin="0,0,0,20">
                                 <TextBlock Text="Dane szczegółowe" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
-                                <Button DockPanel.Dock="Right" Content="Usuń" Command="{Binding DeleteStudentCommand}" 
-                                        Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red"/>
+                                <Button DockPanel.Dock="Right" Content="Usuń" Command="{Binding DeleteStudentCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red" 
+                                        IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}"/>
                             </DockPanel>
 
                             <Label Content="Imię:"/>
-                            <TextBox Text="{Binding SelectedStudent.FirstName, UpdateSourceTrigger=PropertyChanged}" 
-                                     Margin="0,0,0,10" md:TextFieldAssist.HasClearButton="True"/>
-
+                            <TextBox Text="{Binding SelectedStudent.FirstName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" md:TextFieldAssist.HasClearButton="True"/>
                             <Label Content="Nazwisko:"/>
-                            <TextBox Text="{Binding SelectedStudent.LastName, UpdateSourceTrigger=PropertyChanged}" 
-                                     Margin="0,0,0,10" md:TextFieldAssist.HasClearButton="True"/>
-
+                            <TextBox Text="{Binding SelectedStudent.LastName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" md:TextFieldAssist.HasClearButton="True"/>
                             <Label Content="Telefon:"/>
                             <TextBox Text="{Binding SelectedStudent.PhoneNumber, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-
                             <Label Content="E-mail:"/>
                             <TextBox Text="{Binding SelectedStudent.Email, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,20"/>
 
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="Zapisz zmiany" Command="{Binding SaveStudentCommand}" Style="{StaticResource ActionButtonStyle}"/>
-                                <Button Content="Anuluj" Command="{Binding CancelStudentCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"
+                                <Button Content="Anuluj" Command="{Binding CancelStudentCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" 
                                         Visibility="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                             </StackPanel>
                         </StackPanel>
@@ -101,22 +91,16 @@
                         <TextBlock Text="GRUPY" HorizontalAlignment="Center" FontSize="10"/>
                     </StackPanel>
                 </TabItem.Header>
-
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="250"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <DockPanel Grid.Column="0" Margin="10"
-                               IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                    <DockPanel Grid.Column="0" Margin="10" IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
                         <TextBlock Text="Lista Grup" DockPanel.Dock="Top" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
                         <Button Content="Dodaj Grupę" DockPanel.Dock="Bottom" Command="{Binding AddGroupCommand}" Style="{DynamicResource MaterialDesignRaisedButton}"/>
-
-                        <ListBox ItemsSource="{Binding Groups}" 
-                                 SelectedItem="{Binding SelectedGroup}"
-                                 Background="Transparent" BorderThickness="0"
-                                 HorizontalContentAlignment="Stretch" Margin="0,10">
+                        <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch" Margin="0,10">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="2"/>
@@ -127,20 +111,17 @@
 
                     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
                         <Grid Margin="20">
-                            <TextBlock Text="Wybierz grupę z listy lub dodaj nową" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray"
-                                       Visibility="{Binding SelectedGroup, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverted}"/>
+                            <TextBlock Text="Wybierz grupę z listy lub dodaj nową" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="Gray" Visibility="{Binding SelectedGroup, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverted}"/>
 
                             <StackPanel Visibility="{Binding SelectedGroup, Converter={StaticResource NullToVisibilityConverter}}">
                                 <DockPanel LastChildFill="False" Margin="0,0,0,20">
-                                    <TextBlock Text="Dane szczegółowe" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
-                                    <Button DockPanel.Dock="Right" Content="Usuń" Command="{Binding DeleteGroupCommand}" 
-                                            Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red"/>
+                                    <TextBlock Text="Dane szczegółowe grupy" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    <Button DockPanel.Dock="Right" Content="Usuń" Command="{Binding DeleteGroupCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red"
+                                            IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}"/>
                                 </DockPanel>
 
                                 <Label Content="Nazwa grupy:"/>
-                                <TextBox Text="{Binding SelectedGroup.Name, UpdateSourceTrigger=PropertyChanged}" 
-                                         Margin="0,0,0,10" md:TextFieldAssist.HasClearButton="True"/>
-
+                                <TextBox Text="{Binding SelectedGroup.Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" md:TextFieldAssist.HasClearButton="True"/>
                                 <Label Content="Stawka podstawowa (PLN):"/>
                                 <TextBox Text="{Binding SelectedGroup.BaseRate, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
 
@@ -150,27 +131,33 @@
                                         <ItemsControl ItemsSource="{Binding GroupSchedules}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Grid Margin="0,0,0,5">
+                                                    <Grid Margin="0,0,0,8">
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="150"/>
-                                                            <ColumnDefinition Width="100"/>
-                                                            <ColumnDefinition Width="100"/>
+                                                            <ColumnDefinition Width="120"/>
+                                                            <ColumnDefinition Width="120"/>
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
-                                                        <ComboBox ItemsSource="{Binding Source={StaticResource DayOfWeekEnum}}" 
-                                                                  SelectedItem="{Binding DayOfWeek}" Margin="5,0"/>
-                                                        <TextBox Grid.Column="1" Text="{Binding StartTime}" md:HintAssist.Hint="Start" Margin="5,0"/>
-                                                        <TextBox Grid.Column="2" Text="{Binding EndTime}" md:HintAssist.Hint="Koniec" Margin="5,0"/>
-                                                        <Button Grid.Column="3" Command="{Binding DataContext.DeleteScheduleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                CommandParameter="{Binding}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red">
+                                                        <ComboBox ItemsSource="{Binding Source={StaticResource DayOfWeekEnum}}" SelectedItem="{Binding DayOfWeek}" Margin="5,0"/>
+                                                        <md:TimePicker Grid.Column="1" 
+                                                                       SelectedTime="{Binding StartTime, UpdateSourceTrigger=PropertyChanged}" 
+                                                                       Margin="5,0" 
+                                                                       md:HintAssist.Hint="Od" 
+                                                                       Is24Hours="True"/>
+                                                        <md:TimePicker Grid.Column="2" 
+                                                                       SelectedTime="{Binding EndTime, UpdateSourceTrigger=PropertyChanged}" 
+                                                                       Margin="5,0" 
+                                                                       md:HintAssist.Hint="Do" 
+                                                                       Is24Hours="True"/>
+
+                                                        <Button Grid.Column="3" Command="{Binding DataContext.DeleteScheduleCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red">
                                                             <md:PackIcon Kind="Delete"/>
                                                         </Button>
                                                     </Grid>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
-                                        <Button Content="Dodaj termin do grafiku" Command="{Binding AddScheduleCommand}" 
-                                                HorizontalAlignment="Left" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="5,10,0,0"/>
+                                        <Button Content="Dodaj termin do grafiku" Command="{Binding AddScheduleCommand}" HorizontalAlignment="Left" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="5,10,0,0"/>
                                     </StackPanel>
                                 </md:Card>
 
@@ -185,14 +172,13 @@
                                                 </ListBox.ItemTemplate>
                                             </ListBox>
                                             <Button Content="Zarządzaj listą uczniów" 
-                                                    Command="{Binding StartEditMembersCommand}" 
-                                                    Style="{DynamicResource MaterialDesignFlatButton}" Margin="0,10,0,0"/>
+                                                Command="{Binding StartEditMembersCommand}" 
+                                                Style="{DynamicResource MaterialDesignFlatButton}" 
+                                                Margin="0,10,0,0" />
                                         </StackPanel>
 
                                         <StackPanel Visibility="{Binding IsEditingMembers, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <TextBox md:HintAssist.Hint="Szukaj ucznia..." 
-                                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                     Margin="0,0,0,10"/>
+                                            <TextBox md:HintAssist.Hint="Szukaj ucznia..." Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
                                             <ListBox ItemsSource="{Binding AllStudentsSelection}" MaxHeight="250">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
@@ -201,10 +187,8 @@
                                                 </ListBox.ItemTemplate>
                                             </ListBox>
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                                                <Button Content="Anuluj" Command="{Binding CancelEditMembersCommand}" 
-                                                        Style="{DynamicResource MaterialDesignFlatButton}" Foreground="Red"/>
-                                                <Button Content="Zatwierdź listę" Command="{Binding SaveMembersCommand}" 
-                                                        Style="{DynamicResource MaterialDesignFlatButton}"/>
+                                                <Button Content="Anuluj" Command="{Binding CancelEditMembersCommand}" Style="{DynamicResource MaterialDesignFlatButton}" Foreground="Red"/>
+                                                <Button Content="Zatwierdź listę" Command="{Binding SaveMembersCommand}" Style="{DynamicResource MaterialDesignFlatButton}"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </StackPanel>
@@ -212,7 +196,7 @@
 
                                 <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
                                     <Button Content="Zapisz zmiany" Command="{Binding SaveGroupCommand}" Style="{StaticResource ActionButtonStyle}"/>
-                                    <Button Content="Anuluj" Command="{Binding CancelGroupCommand}" Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    <Button Content="Anuluj" Command="{Binding CancelGroupCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" 
                                             Visibility="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                 </StackPanel>
                             </StackPanel>
@@ -228,7 +212,6 @@
                         <TextBlock Text="KALENDARZ" HorizontalAlignment="Center" FontSize="10"/>
                     </StackPanel>
                 </TabItem.Header>
-
                 <Grid Margin="10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -246,8 +229,7 @@
                             </Button>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <TextBlock Text="{Binding CurrentWeekTitle}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
-                                <Button Command="{Binding AddManualLessonCommand}" Content="NOWA LEKCJA" Margin="20,0,0,0" 
-                                        Background="White" Foreground="{DynamicResource PrimaryHueMidBrush}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                <Button Command="{Binding AddManualLessonCommand}" Content="NOWA LEKCJA" Margin="20,0,0,0" Background="White" Foreground="{DynamicResource PrimaryHueMidBrush}" Style="{StaticResource MaterialDesignRaisedButton}"/>
                             </StackPanel>
                         </DockPanel>
                     </md:ColorZone>
@@ -276,9 +258,7 @@
                                             <ItemsControl ItemsSource="{Binding Lessons}" Margin="5">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Button Command="{Binding DataContext.SelectLessonCommand, RelativeSource={RelativeSource AncestorType=ItemsControl, AncestorLevel=2}}" 
-                                                                CommandParameter="{Binding}"
-                                                                Style="{StaticResource MaterialDesignFlatButton}" Padding="0" Margin="0,0,0,5" HorizontalContentAlignment="Stretch" Height="Auto">
+                                                        <Button Command="{Binding DataContext.SelectLessonCommand, RelativeSource={RelativeSource AncestorType=ItemsControl, AncestorLevel=2}}" CommandParameter="{Binding}" Style="{StaticResource MaterialDesignFlatButton}" Padding="0" Margin="0,0,0,5" HorizontalContentAlignment="Stretch" Height="Auto">
                                                             <md:Card Background="{DynamicResource MaterialDesignTextFieldBoxBackground}" Padding="8">
                                                                 <StackPanel>
                                                                     <TextBlock Text="{Binding StartTime, StringFormat={}{0:HH:mm}}" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
@@ -300,7 +280,7 @@
                     <md:Card Grid.Row="2" Margin="4,10,4,0" Padding="15" Visibility="{Binding SelectedLesson, Converter={StaticResource NullToVisibilityConverter}}">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="250"/>
+                                <ColumnDefinition Width="350"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
@@ -308,28 +288,29 @@
                             <StackPanel Margin="0,0,20,0">
                                 <TextBlock Text="Szczegóły lekcji" FontWeight="Bold" FontSize="16" Margin="0,0,0,10"/>
                                 <Label Content="Grupa:"/>
-                                <ComboBox ItemsSource="{Binding Groups}" 
-                                          SelectedItem="{Binding SelectedLesson.Group}" 
-                                          DisplayMemberPath="Name" Margin="0,0,0,10"/>
-                                <Label Content="Data i godzina:"/>
-                                <TextBox Text="{Binding SelectedLesson.StartTime, StringFormat={}{0:yyyy-MM-dd HH:mm}}" Margin="0,0,0,5"/>
+                                <ComboBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedLesson.Group}" DisplayMemberPath="Name" Margin="0,0,0,10"/>
+                                <Label Content="Dzień i Godzina:"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <DatePicker SelectedDate="{Binding SelectedLesson.StartTime}" Width="130" Margin="0,0,10,0" Style="{StaticResource MaterialDesignDatePicker}"/>
+                                    <md:TimePicker SelectedTime="{Binding SelectedLesson.StartTime, UpdateSourceTrigger=PropertyChanged}" 
+                                                   Width="100" 
+                                                   Is24Hours="True"/>
+                                </StackPanel>
+                                <Label Content="Status:" Margin="0,10,0,0"/>
+                                <ComboBox ItemsSource="{Binding AllStatuses}" SelectedItem="{Binding SelectedLesson.Status}" Margin="0,0,0,10"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1">
                                 <Label Content="Notatki / Temat:"/>
-                                <TextBox Text="{Binding SelectedLesson.Note, UpdateSourceTrigger=PropertyChanged}" 
-                                         md:HintAssist.Hint="Wpisz temat lekcji..."
-                                         TextWrapping="Wrap" AcceptsReturn="True" MinHeight="80"/>
+                                <TextBox Text="{Binding SelectedLesson.Note, UpdateSourceTrigger=PropertyChanged}" md:HintAssist.Hint="Wpisz temat lekcji..." TextWrapping="Wrap" AcceptsReturn="True" MinHeight="100" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="2" VerticalAlignment="Bottom" Margin="20,0,0,0">
-                                <Button Content="ZAPISZ" Command="{Binding SaveLessonCommand}" 
-                                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,10"/>
+                                <Button Content="ZAPISZ" Command="{Binding SaveLessonCommand}" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,10"/>
                                 <StackPanel Orientation="Horizontal">
-                                    <Button Content="Anuluj" Command="{Binding SelectLessonCommand}" CommandParameter="{x:Null}" 
-                                            Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,10,0"/>
-                                    <Button Content="Usuń" Command="{Binding DeleteLessonCommand}" 
-                                            Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red"/>
+                                    <Button Content="Anuluj" Command="{Binding SelectLessonCommand}" CommandParameter="{x:Null}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,10,0"/>
+                                    <Button Content="Usuń" Command="{Binding DeleteLessonCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red"
+                                            IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}"/>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>

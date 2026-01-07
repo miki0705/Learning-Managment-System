@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Learning_Management_System.Models;
+using System;
 
 namespace Learning_Management_System.Data
 {
@@ -15,9 +16,6 @@ namespace Learning_Management_System.Data
 
         public AppDbContext()
         {
-            // PROFESJONALNE PODEJŚCIE:
-            // Tworzy bazę danych TYLKO, jeśli plik jeszcze nie istnieje.
-            // Jeśli plik już jest, EF po prostu go użyje, zachowując dane.
             Database.EnsureCreated();
         }
 
@@ -30,7 +28,6 @@ namespace Learning_Management_System.Data
         {
             if (!optionsBuilder.IsConfigured)
             {
-                // Plik będzie się znajdował w folderze z plikiem .exe (bin/Debug)
                 optionsBuilder.UseSqlite("Data Source=LearningManagementSystem.db");
                 optionsBuilder.UseLazyLoadingProxies();
             }
@@ -38,6 +35,20 @@ namespace Learning_Management_System.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
+            // USUNIĘTO: Konwerter TimeSpan na Ticks (powodował błędy przy edycji)
+            // Teraz StartTime i EndTime są typem DateTime, który SQLite obsługuje natywnie.
+
+            modelBuilder.Entity<GroupSchedule>(entity =>
+            {
+                // Relacja z grupą
+                entity.HasOne(e => e.Group)
+                      .WithMany(g => g.Schedules)
+                      .HasForeignKey(e => e.GroupId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // 1. Unikalność zapisu ucznia do grupy
             modelBuilder.Entity<Enrollment>()
                 .HasIndex(e => new { e.StudentId, e.GroupId })
@@ -46,11 +57,11 @@ namespace Learning_Management_System.Data
             // 2. Relacja Lekcji z Grupą
             modelBuilder.Entity<Lesson>()
                 .HasOne(l => l.Group)
-                .WithMany()
+                .WithMany(g => g.Lessons)
                 .HasForeignKey(l => l.GroupId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 3. Relacja Lekcji z Harmonogramem (Opcja B)
+            // 3. Relacja Lekcji z Harmonogramem
             modelBuilder.Entity<Lesson>()
                 .HasOne(l => l.GroupSchedule)
                 .WithMany()
