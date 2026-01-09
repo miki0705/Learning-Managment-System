@@ -1,5 +1,6 @@
 ﻿using Learning_Management_System.Models;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Learning_Management_System.Services
 {
@@ -8,7 +9,7 @@ namespace Learning_Management_System.Services
         IEnumerable<Group> GetAllGroups();
         void AddGroup(Group group);
         void DeleteGroup(Group group);
-        void SaveChanges();
+        Task SaveChangesAsync();
         void ReloadGroup(Group group);
         Group CreateNewGroup(); // Tworzenie obiektu zgodnie z Twoim modelem
 

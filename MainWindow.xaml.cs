@@ -14,10 +14,26 @@ namespace Learning_Management_System
 
             var studentService = new StudentService(dbContext);
             var groupService = new GroupService(dbContext);
-            var lessonService = new LessonService(dbContext); // DODAJ TO
+            var lessonService = new LessonService(dbContext);
+            var paymentService = new PaymentService(dbContext);
+            var attendanceService = new AttendanceService(dbContext);
+            var reportService = new ReportService(dbContext, paymentService);
+            var exportService = new ExportService();
+            var backupService = new BackupService(dbContext);
 
             // Przekaż lessonService jako trzeci parametr
-            DataContext = new MainViewModel(studentService, groupService, lessonService);
+            DataContext = new MainViewModel(studentService, groupService, lessonService, paymentService, attendanceService, reportService, exportService, backupService);
+        }
+
+        private void LessonCard_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (sender is MaterialDesignThemes.Wpf.Card card && card.Tag is Models.Lesson lesson)
+            {
+                if (DataContext is ViewModels.MainViewModel mainViewModel)
+                {
+                    mainViewModel.LessonBrowserViewModel.SelectLessonCommand.Execute(lesson);
+                }
+            }
         }
     }
 }

@@ -67,6 +67,27 @@ namespace Learning_Management_System.Data
                 .WithMany()
                 .HasForeignKey(l => l.GroupScheduleId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // 4. Relacja Attendance z Lesson
+            modelBuilder.Entity<Attendance>()
+                .HasOne(a => a.Lesson)
+                .WithMany(l => l.Attendances)
+                .HasForeignKey(a => a.LessonId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 5. Relacja Attendance z Student
+            modelBuilder.Entity<Attendance>()
+                .HasOne(a => a.Student)
+                .WithMany(s => s.Attendances)
+                .HasForeignKey(a => a.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 6. Relacja Payment z Student
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.Student)
+                .WithMany(s => s.Payments)
+                .HasForeignKey(p => p.StudentId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

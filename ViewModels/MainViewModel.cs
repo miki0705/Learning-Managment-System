@@ -20,12 +20,15 @@ namespace Learning_Management_System.ViewModels
         private readonly IStudentService _studentService;
         private readonly IGroupService _groupService;
         private readonly ILessonService _lessonService;
+        private readonly IPaymentService _paymentService;
+        private readonly IAttendanceService _attendanceService;
+        private readonly IBackupService _backupService;
 
         private DateTime _currentWeekStart;
         private Student? _selectedStudent;
         private Group? _selectedGroup;
         private Lesson? _selectedLesson;
-        private ObservableCollection<Student> _groupMembers;
+        private ObservableCollection<GroupMemberViewModel> _groupMembers;
         private ObservableCollection<GroupSchedule> _groupSchedules;
         private bool _isEditingMembers;
         private bool _isDirty;
@@ -43,6 +46,7 @@ namespace Learning_Management_System.ViewModels
                 if (_isDirty == value) return;
                 _isDirty = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsBlocked));
                 CommandManager.InvalidateRequerySuggested();
             }
         }
@@ -60,7 +64,7 @@ namespace Learning_Management_System.ViewModels
 
         public IEnumerable<LessonStatus> AllStatuses => Enum.GetValues(typeof(LessonStatus)).Cast<LessonStatus>();
 
-        public ObservableCollection<Student> GroupMembers
+        public ObservableCollection<GroupMemberViewModel> GroupMembers
         {
             get => _groupMembers;
             set { _groupMembers = value; OnPropertyChanged(); }
@@ -123,10 +127,68 @@ namespace Learning_Management_System.ViewModels
         public bool IsEditingMembers
         {
             get => _isEditingMembers;
-            set { _isEditingMembers = value; OnPropertyChanged(); }
+            set 
+            { 
+                if (_isEditingMembers == value) return;
+                _isEditingMembers = value; 
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsBlocked));
+            }
         }
 
+        /// <summary>
+        /// Returns true when the UI should be blocked (tabs and group selection disabled).
+        /// This happens when either IsDirty is true OR IsEditingMembers is true.
+        /// </summary>
+        public bool IsBlocked => IsDirty || IsEditingMembers;
+
         public string CurrentWeekTitle => $"{_currentWeekStart:dd.MM} - {_currentWeekStart.AddDays(6):dd.MM.yyyy}";
+
+        private DateTime? _selectedDate;
+        public DateTime? SelectedDate
+        {
+            get => _selectedDate;
+            set
+            {
+                if (_selectedDate == value) return;
+                _selectedDate = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private bool _isCalendarWidgetVisible;
+        public bool IsCalendarWidgetVisible
+        {
+            get => _isCalendarWidgetVisible;
+            set
+            {
+                if (_isCalendarWidgetVisible == value) return;
+                _isCalendarWidgetVisible = value;
+                OnPropertyChanged();
+                if (value)
+                {
+                    // Set display date to current week start when opening
+                    CalendarDisplayDate = _currentWeekStart;
+                }
+                else
+                {
+                    // Clear selected date when hiding
+                    SelectedDate = null;
+                }
+            }
+        }
+
+        private DateTime _calendarDisplayDate = DateTime.Today;
+        public DateTime CalendarDisplayDate
+        {
+            get => _calendarDisplayDate;
+            set
+            {
+                if (_calendarDisplayDate == value) return;
+                _calendarDisplayDate = value;
+                OnPropertyChanged();
+            }
+        }
         #endregion
 
         #region Komendy
@@ -145,21 +207,46 @@ namespace Learning_Management_System.ViewModels
         public ICommand DeleteScheduleCommand { get; }
         public ICommand NextWeekCommand { get; }
         public ICommand PreviousWeekCommand { get; }
+        public ICommand JumpToWeekCommand { get; }
+        public ICommand ToggleCalendarWidgetCommand { get; }
         public ICommand SelectLessonCommand { get; }
         public ICommand DeleteLessonCommand { get; }
         public ICommand SaveLessonCommand { get; }
         public ICommand AddManualLessonCommand { get; }
         #endregion
 
-        public MainViewModel(IStudentService studentService, IGroupService groupService, ILessonService lessonService)
+        public FinanceViewModel FinanceViewModel { get; }
+        public LessonBrowserViewModel LessonBrowserViewModel { get; }
+        public ReportViewModel ReportViewModel { get; }
+
+        public ICommand BackupDatabaseCommand { get; }
+        public ICommand RestoreDatabaseCommand { get; }
+        public ICommand ExportDataCommand { get; }
+        public ICommand ImportDataCommand { get; }
+
+        public MainViewModel(IStudentService studentService, IGroupService groupService, ILessonService lessonService, 
+            IPaymentService paymentService, IAttendanceService attendanceService,
+            IReportService reportService, IExportService exportService, IBackupService backupService)
         {
             _studentService = studentService;
             _groupService = groupService;
             _lessonService = lessonService;
+            _paymentService = paymentService;
+            _attendanceService = attendanceService;
+            _backupService = backupService;
+
+            FinanceViewModel = new FinanceViewModel(paymentService, studentService);
+            LessonBrowserViewModel = new LessonBrowserViewModel(lessonService, attendanceService, groupService, paymentService);
+            ReportViewModel = new ReportViewModel(reportService, exportService);
+
+            BackupDatabaseCommand = new RelayCommand(async o => await BackupDatabaseAsync());
+            RestoreDatabaseCommand = new RelayCommand(async o => await RestoreDatabaseAsync());
+            ExportDataCommand = new RelayCommand(async o => await ExportDataAsync());
+            ImportDataCommand = new RelayCommand(async o => await ImportDataAsync());
 
             Students = new ObservableCollection<Student>(_studentService.GetAllStudents());
             Groups = new ObservableCollection<Group>(_groupService.GetAllGroups());
-            _groupMembers = new ObservableCollection<Student>();
+            _groupMembers = new ObservableCollection<GroupMemberViewModel>();
             _groupSchedules = new ObservableCollection<GroupSchedule>();
 
             // Inicjalizacja Komend
@@ -168,13 +255,13 @@ namespace Learning_Management_System.ViewModels
             DeleteStudentCommand = new RelayCommand(o => DeleteStudent(), o => SelectedStudent != null && !IsDirty);
             CancelStudentCommand = new RelayCommand(o => CancelStudentChanges(), o => IsDirty && SelectedStudent != null);
 
-            AddGroupCommand = new RelayCommand(o => AddGroup(), o => !IsDirty);
+            AddGroupCommand = new RelayCommand(o => AddGroup(), o => !IsBlocked);
             SaveGroupCommand = new RelayCommand(async o => await SaveGroupAsync(), o => IsDirty);
-            DeleteGroupCommand = new RelayCommand(o => DeleteGroup(), o => SelectedGroup != null && !IsDirty);
+            DeleteGroupCommand = new RelayCommand(async o => await DeleteGroupAsync(), o => SelectedGroup != null && !IsBlocked);
             CancelGroupCommand = new RelayCommand(o => CancelGroupChanges(), o => IsDirty && SelectedGroup != null);
 
             StartEditMembersCommand = new RelayCommand(o => StartEditMembers(), o => SelectedGroup != null);
-            SaveMembersCommand = new RelayCommand(o => SaveMembers());
+            SaveMembersCommand = new RelayCommand(async o => await SaveMembersAsync());
             CancelEditMembersCommand = new RelayCommand(o => { IsEditingMembers = false; });
 
             AddScheduleCommand = new RelayCommand(o => AddSchedule(), o => SelectedGroup != null);
@@ -182,6 +269,8 @@ namespace Learning_Management_System.ViewModels
 
             NextWeekCommand = new RelayCommand(async o => await ChangeWeekAsync(7));
             PreviousWeekCommand = new RelayCommand(async o => await ChangeWeekAsync(-7));
+            JumpToWeekCommand = new RelayCommand(async o => await JumpToWeekAsync(), o => SelectedDate.HasValue);
+            ToggleCalendarWidgetCommand = new RelayCommand(o => IsCalendarWidgetVisible = !IsCalendarWidgetVisible);
 
             SelectLessonCommand = new RelayCommand(o => {
                 if (o is Lesson lesson) SelectedLesson = lesson;
@@ -299,13 +388,16 @@ namespace Learning_Management_System.ViewModels
         {
             if (SelectedGroup == null) return;
             if (SelectedGroup.Id == 0) _groupService.AddGroup(SelectedGroup);
-            _groupService.SaveChanges();
+            await _groupService.SaveChangesAsync();
 
             await _lessonService.SyncLessonsWithScheduleAsync(SelectedGroup);
 
             IsDirty = false;
             RefreshList();
             await LoadWeekDataAsync();
+            
+            // Refresh lesson browser to show newly synced lessons
+            await LessonBrowserViewModel.LoadLessonsAsync();
         }
 
         private void CancelGroupChanges()
@@ -332,7 +424,7 @@ namespace Learning_Management_System.ViewModels
             RefreshList();
         }
 
-        private void DeleteGroup()
+        private async Task DeleteGroupAsync()
         {
             if (SelectedGroup == null) return;
             if (MessageBox.Show($"Usunąć grupę {SelectedGroup.Name}?", "Potwierdzenie", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
@@ -340,7 +432,7 @@ namespace Learning_Management_System.ViewModels
                 if (SelectedGroup.Id > 0)
                 {
                     _groupService.DeleteGroup(SelectedGroup);
-                    _groupService.SaveChanges();
+                    await _groupService.SaveChangesAsync();
                 }
                 Groups.Remove(SelectedGroup);
                 SelectedGroup = null;
@@ -350,13 +442,41 @@ namespace Learning_Management_System.ViewModels
 
         private void LoadGroupMembers()
         {
+            if (GroupMembers != null)
+            {
+                // Unsubscribe from property changes to avoid memory leaks
+                foreach (var member in GroupMembers)
+                {
+                    member.PropertyChanged -= OnGroupMemberPropertyChanged;
+                }
+            }
+
             if (SelectedGroup == null || SelectedGroup.Id == 0)
             {
-                GroupMembers = new ObservableCollection<Student>();
+                GroupMembers = new ObservableCollection<GroupMemberViewModel>();
                 return;
             }
-            var members = SelectedGroup.Enrollments.Select(e => e.Student).ToList();
-            GroupMembers = new ObservableCollection<Student>(members);
+
+            var members = SelectedGroup.Enrollments
+                .Select(e => new GroupMemberViewModel(e))
+                .ToList();
+
+            // Subscribe to property changes to track IsDirty
+            foreach (var member in members)
+            {
+                member.PropertyChanged += OnGroupMemberPropertyChanged;
+            }
+
+            GroupMembers = new ObservableCollection<GroupMemberViewModel>(members);
+        }
+
+        private void OnGroupMemberPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (_isInternalUpdate) return;
+            if (e.PropertyName == nameof(GroupMemberViewModel.IndividualRate))
+            {
+                IsDirty = true;
+            }
         }
 
         private void LoadGroupSchedules()
@@ -415,7 +535,7 @@ namespace Learning_Management_System.ViewModels
 
             SelectedGroup.Schedules.Remove(schedule);
             GroupSchedules.Remove(schedule);
-            if (SelectedGroup.Id > 0) _groupService.SaveChanges();
+            if (SelectedGroup.Id > 0) await _groupService.SaveChangesAsync();
 
             await LoadWeekDataAsync();
             IsDirty = true;
@@ -443,7 +563,7 @@ namespace Learning_Management_System.ViewModels
             IsEditingMembers = true;
         }
 
-        private void SaveMembers()
+        private async Task SaveMembersAsync()
         {
             if (SelectedGroup == null) return;
 
@@ -457,7 +577,7 @@ namespace Learning_Management_System.ViewModels
             _groupService.UpdateGroupMembers(SelectedGroup, selectedStudents);
 
             // ZAPISUJEMY ZMIANY DO BAZY
-            _groupService.SaveChanges();
+            await _groupService.SaveChangesAsync();
 
             // Odświeżamy widok UI
             LoadGroupMembers();
@@ -502,6 +622,25 @@ namespace Learning_Management_System.ViewModels
             await LoadWeekDataAsync();
         }
 
+        private async Task JumpToWeekAsync()
+        {
+            if (!SelectedDate.HasValue) return;
+
+            SelectedLesson = null;
+            DateTime selectedDate = SelectedDate.Value;
+            
+            // Calculate the Monday of the week containing the selected date
+            int diff = (7 + (selectedDate.DayOfWeek - DayOfWeek.Monday)) % 7;
+            _currentWeekStart = selectedDate.AddDays(-1 * diff).Date;
+            
+            OnPropertyChanged(nameof(CurrentWeekTitle));
+            await LoadWeekDataAsync();
+            
+            // Clear the selected date and hide the calendar widget after jumping
+            SelectedDate = null;
+            IsCalendarWidgetVisible = false;
+        }
+
         private void AddManualLesson()
         {
             var newLesson = new Lesson
@@ -526,6 +665,7 @@ namespace Learning_Management_System.ViewModels
 
             IsDirty = false;
             await LoadWeekDataAsync();
+            await LessonBrowserViewModel.LoadLessonsAsync();
         }
 
         private async Task DeleteLessonAsync()
@@ -537,6 +677,124 @@ namespace Learning_Management_System.ViewModels
                     await _lessonService.DeleteLessonAsync(SelectedLesson.Id);
                 SelectedLesson = null;
                 await LoadWeekDataAsync();
+                await LessonBrowserViewModel.LoadLessonsAsync();
+            }
+        }
+        #endregion
+
+
+        #region Backup Methods
+        private async Task BackupDatabaseAsync()
+        {
+            var saveDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Database files (*.db)|*.db|All files (*.*)|*.*",
+                FileName = $"LearningManagementSystem_backup_{DateTime.Now:yyyyMMdd_HHmmss}.db"
+            };
+
+            if (saveDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    await _backupService.BackupDatabaseAsync(saveDialog.FileName);
+                    MessageBox.Show("Kopia zapasowa została utworzona pomyślnie.", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Błąd podczas tworzenia kopii zapasowej: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private async Task RestoreDatabaseAsync()
+        {
+            var result = MessageBox.Show(
+                "Przywrócenie bazy danych spowoduje zamknięcie aplikacji. Czy chcesz kontynuować?",
+                "Ostrzeżenie",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                var openDialog = new Microsoft.Win32.OpenFileDialog
+                {
+                    Filter = "Database files (*.db)|*.db|All files (*.*)|*.*"
+                };
+
+                if (openDialog.ShowDialog() == true)
+                {
+                    try
+                    {
+                        await _backupService.RestoreDatabaseAsync(openDialog.FileName);
+                        MessageBox.Show(
+                            "Baza danych została przywrócona. Aplikacja zostanie zamknięta. Uruchom ją ponownie.",
+                            "Sukces",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                        System.Windows.Application.Current.Shutdown();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Błąd podczas przywracania bazy danych: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+        }
+
+        private async Task ExportDataAsync()
+        {
+            var saveDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                FileName = $"LearningManagementSystem_export_{DateTime.Now:yyyyMMdd_HHmmss}.json"
+            };
+
+            if (saveDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    await _backupService.ExportToJsonAsync(saveDialog.FileName);
+                    MessageBox.Show("Dane zostały wyeksportowane pomyślnie.", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Błąd podczas eksportu danych: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private async Task ImportDataAsync()
+        {
+            var result = MessageBox.Show(
+                "Import danych może nadpisać istniejące dane. Czy chcesz kontynuować?",
+                "Ostrzeżenie",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                var openDialog = new Microsoft.Win32.OpenFileDialog
+                {
+                    Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*"
+                };
+
+                if (openDialog.ShowDialog() == true)
+                {
+                    try
+                    {
+                        await _backupService.ImportFromJsonAsync(openDialog.FileName);
+                        MessageBox.Show(
+                            "Dane zostały zaimportowane. Aplikacja zostanie zamknięta. Uruchom ją ponownie.",
+                            "Sukces",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                        System.Windows.Application.Current.Shutdown();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Błąd podczas importu danych: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
             }
         }
         #endregion

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Learning_Management_System.Services
 {
@@ -36,9 +37,9 @@ namespace Learning_Management_System.Services
             _db.Groups.Remove(group);
         }
 
-        public void SaveChanges()
+        public async Task SaveChangesAsync()
         {
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
         }
 
         public void ReloadGroup(Group group)

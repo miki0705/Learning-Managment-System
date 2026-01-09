@@ -122,5 +122,23 @@ namespace Learning_Management_System.Services
                 l.GroupScheduleId == scheduleId &&
                 l.StartTime == startTime);
         }
+
+        public async Task CompleteLessonReportAsync(int lessonId, IPaymentService paymentService)
+        {
+            var lesson = await _context.Lessons
+                .Include(l => l.Group)
+                .Include(l => l.Attendances)
+                .FirstOrDefaultAsync(l => l.Id == lessonId);
+
+            if (lesson == null) return;
+
+            // Update lesson status to Completed
+            lesson.Status = LessonStatus.Completed;
+            _context.Entry(lesson).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            // Update wallets from lesson
+            await paymentService.UpdateWalletsFromLessonAsync(lessonId);
+        }
     }
 }

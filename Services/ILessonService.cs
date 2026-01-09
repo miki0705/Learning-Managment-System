@@ -14,5 +14,6 @@ namespace Learning_Management_System.Services
         Task SyncLessonsWithScheduleAsync(Group group);
         Task<IEnumerable<Lesson>> GetFutureLessonsByScheduleAsync(int scheduleId); // Nazwa z Async
         Task<bool> LessonExistsAsync(int groupId, int scheduleId, DateTime startTime);
+        Task CompleteLessonReportAsync(int lessonId, IPaymentService paymentService);
     }
 }

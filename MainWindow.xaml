@@ -4,6 +4,7 @@
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:Learning_Management_System"
         xmlns:helpers="clr-namespace:Learning_Management_System.Helpers"
+        xmlns:models="clr-namespace:Learning_Management_System.Models"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime" 
         Title="ScholarFlow" Height="850" Width="1200"
         WindowStartupLocation="CenterScreen"
@@ -15,10 +16,17 @@
     <Window.Resources>
         <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <helpers:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <helpers:DecimalConverter x:Key="DecimalConverter"/>
 
         <ObjectDataProvider x:Key="DayOfWeekEnum" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
             <ObjectDataProvider.MethodParameters>
                 <x:Type TypeName="sys:DayOfWeek"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+
+        <ObjectDataProvider x:Key="AttendanceStatusEnum" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="models:AttendanceStatus"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
 
@@ -28,9 +36,20 @@
     </Window.Resources>
 
     <Grid>
+        <!-- Menu Bar -->
+        <Menu HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent">
+            <MenuItem Header="Plik">
+                <MenuItem Header="Kopia zapasowa bazy danych" Command="{Binding BackupDatabaseCommand}"/>
+                <MenuItem Header="Przywróć bazę danych" Command="{Binding RestoreDatabaseCommand}"/>
+                <Separator/>
+                <MenuItem Header="Eksportuj dane do JSON" Command="{Binding ExportDataCommand}"/>
+                <MenuItem Header="Importuj dane z JSON" Command="{Binding ImportDataCommand}"/>
+            </MenuItem>
+        </Menu>
+
         <TabControl TabStripPlacement="Left" Style="{DynamicResource MaterialDesignNavigationRailTabControl}">
 
-            <TabItem IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+            <TabItem IsEnabled="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
                 <TabItem.Header>
                     <StackPanel Margin="5">
                         <md:PackIcon Kind="Account" HorizontalAlignment="Center" Width="24" Height="24"/>
@@ -43,7 +62,7 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <DockPanel Grid.Column="0" Margin="10" IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                    <DockPanel Grid.Column="0" Margin="10" IsEnabled="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
                         <TextBlock Text="Lista Uczniów" DockPanel.Dock="Top" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
                         <Button Content="Dodaj Ucznia" DockPanel.Dock="Bottom" Command="{Binding AddStudentCommand}" Style="{DynamicResource MaterialDesignRaisedButton}"/>
                         <ListBox ItemsSource="{Binding Students}" SelectedItem="{Binding SelectedStudent}" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch" Margin="0,10">
@@ -84,7 +103,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+            <TabItem IsEnabled="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
                 <TabItem.Header>
                     <StackPanel Margin="5">
                         <md:PackIcon Kind="AccountGroup" HorizontalAlignment="Center" Width="24" Height="24"/>
@@ -97,7 +116,7 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <DockPanel Grid.Column="0" Margin="10" IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                    <DockPanel Grid.Column="0" Margin="10" IsEnabled="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
                         <TextBlock Text="Lista Grup" DockPanel.Dock="Top" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
                         <Button Content="Dodaj Grupę" DockPanel.Dock="Bottom" Command="{Binding AddGroupCommand}" Style="{DynamicResource MaterialDesignRaisedButton}"/>
                         <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Stretch" Margin="0,10">
@@ -117,7 +136,7 @@
                                 <DockPanel LastChildFill="False" Margin="0,0,0,20">
                                     <TextBlock Text="Dane szczegółowe grupy" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                                     <Button DockPanel.Dock="Right" Content="Usuń" Command="{Binding DeleteGroupCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red"
-                                            IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}"/>
+                                            IsEnabled="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}"/>
                                 </DockPanel>
 
                                 <Label Content="Nazwa grupy:"/>
@@ -161,38 +180,109 @@
                                     </StackPanel>
                                 </md:Card>
 
-                                <Expander Header="Uczniowie w tej grupie" IsExpanded="False" Margin="0,10,0,0">
-                                    <StackPanel Margin="10">
-                                        <StackPanel Visibility="{Binding IsEditingMembers, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
-                                            <ListBox ItemsSource="{Binding GroupMembers}" MaxHeight="150">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <TextBlock Text="{Binding FullName}"/>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                            <Button Content="Zarządzaj listą uczniów" 
-                                                Command="{Binding StartEditMembersCommand}" 
-                                                Style="{DynamicResource MaterialDesignFlatButton}" 
-                                                Margin="0,10,0,0" />
-                                        </StackPanel>
+                                <md:Card Margin="0,10,0,0" Padding="0">
+                                    <Expander Header="Uczniowie w tej grupie" IsExpanded="False" Style="{DynamicResource MaterialDesignExpander}">
+                                        <StackPanel Margin="15">
+                                            <StackPanel Visibility="{Binding IsEditingMembers, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                                                <!-- Header Row -->
+                                                <Grid Margin="0,0,0,10" Background="{DynamicResource MaterialDesignDivider}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="200"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="Uczeń" FontWeight="Bold" Padding="12,8" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Stawka indywidualna" FontWeight="Bold" Grid.Column="1" Padding="12,8" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                </Grid>
+                                                
+                                                <!-- Students List -->
+                                                <ScrollViewer MaxHeight="250" VerticalScrollBarVisibility="Auto">
+                                                    <ItemsControl ItemsSource="{Binding GroupMembers}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <md:Card Margin="0,0,0,8" Padding="0" Style="{DynamicResource MaterialDesignOutlinedCard}">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="200"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <Border Grid.Column="0" Padding="12,10" Background="Transparent">
+                                                                            <TextBlock Text="{Binding FullName}" 
+                                                                                       FontSize="14" 
+                                                                                       VerticalAlignment="Center"
+                                                                                       FontWeight="SemiBold"/>
+                                                                        </Border>
+                                                                        <Border Grid.Column="1" Padding="8,10" Background="Transparent">
+                                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                                <TextBox Text="{Binding IndividualRate, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource DecimalConverter}}" 
+                                                                                         Width="120" 
+                                                                                         md:HintAssist.Hint="PLN"
+                                                                                         md:HintAssist.FloatingOffset="0,0"
+                                                                                         VerticalContentAlignment="Center"
+                                                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                                                                <TextBlock Text="PLN" 
+                                                                                           VerticalAlignment="Center" 
+                                                                                           Margin="8,0,0,0" 
+                                                                                           Foreground="Gray"
+                                                                                           FontSize="12"/>
+                                                                            </StackPanel>
+                                                                        </Border>
+                                                                    </Grid>
+                                                                </md:Card>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </ScrollViewer>
+                                                
+                                                <!-- Footer Info -->
+                                                <TextBlock Text="💡 Pozostaw puste, aby użyć stawki podstawowej grupy" 
+                                                           FontSize="11" 
+                                                           Foreground="Gray" 
+                                                           Margin="0,10,0,0" 
+                                                           TextWrapping="Wrap"
+                                                           FontStyle="Italic"/>
+                                                
+                                                <!-- Manage Button -->
+                                                <Button Content="Zarządzaj listą uczniów" 
+                                                        Command="{Binding StartEditMembersCommand}" 
+                                                        Style="{DynamicResource MaterialDesignOutlinedButton}" 
+                                                        Margin="0,15,0,5"
+                                                        HorizontalAlignment="Stretch"/>
+                                            </StackPanel>
 
-                                        <StackPanel Visibility="{Binding IsEditingMembers, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <TextBox md:HintAssist.Hint="Szukaj ucznia..." Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                            <ListBox ItemsSource="{Binding AllStudentsSelection}" MaxHeight="250">
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Student.FullName}"/>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                                                <Button Content="Anuluj" Command="{Binding CancelEditMembersCommand}" Style="{DynamicResource MaterialDesignFlatButton}" Foreground="Red"/>
-                                                <Button Content="Zatwierdź listę" Command="{Binding SaveMembersCommand}" Style="{DynamicResource MaterialDesignFlatButton}"/>
+                                            <StackPanel Visibility="{Binding IsEditingMembers, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Text="Wybierz uczniów do dodania do grupy:" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                                <TextBox md:HintAssist.Hint="Szukaj ucznia..." 
+                                                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                                         Margin="0,0,0,15"
+                                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                                <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                                    <ItemsControl ItemsSource="{Binding AllStudentsSelection}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <md:Card Margin="0,0,0,6" Padding="0" Style="{DynamicResource MaterialDesignOutlinedCard}">
+                                                                    <CheckBox IsChecked="{Binding IsSelected}" 
+                                                                              Content="{Binding Student.FullName}"
+                                                                              Margin="12,10"
+                                                                              FontSize="14"/>
+                                                                </md:Card>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </ScrollViewer>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                                                    <Button Content="Anuluj" 
+                                                            Command="{Binding CancelEditMembersCommand}" 
+                                                            Style="{DynamicResource MaterialDesignFlatButton}" 
+                                                            Foreground="Red"
+                                                            Margin="0,0,10,0"/>
+                                                    <Button Content="Zatwierdź listę" 
+                                                            Command="{Binding SaveMembersCommand}" 
+                                                            Style="{DynamicResource MaterialDesignRaisedButton}"/>
+                                                </StackPanel>
                                             </StackPanel>
                                         </StackPanel>
-                                    </StackPanel>
-                                </Expander>
+                                    </Expander>
+                                </md:Card>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
                                     <Button Content="Zapisz zmiany" Command="{Binding SaveGroupCommand}" Style="{StaticResource ActionButtonStyle}"/>
@@ -205,7 +295,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+            <TabItem IsEnabled="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
                 <TabItem.Header>
                     <StackPanel Margin="5">
                         <md:PackIcon Kind="CalendarMonth" HorizontalAlignment="Center" Width="24" Height="24"/>
@@ -220,18 +310,82 @@
                     </Grid.RowDefinitions>
 
                     <md:ColorZone Mode="PrimaryMid" Padding="10" CornerRadius="5">
-                        <DockPanel>
-                            <Button Command="{Binding PreviousWeekCommand}" Style="{StaticResource MaterialDesignIconButton}" Foreground="White">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Navigation Buttons -->
+                            <Button Grid.Column="0" Command="{Binding PreviousWeekCommand}" Style="{StaticResource MaterialDesignIconButton}" Foreground="White">
                                 <md:PackIcon Kind="ChevronLeft" />
                             </Button>
-                            <Button Command="{Binding NextWeekCommand}" DockPanel.Dock="Right" Style="{StaticResource MaterialDesignIconButton}" Foreground="White">
+                            
+                            <!-- Center: Week Title and Calendar -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <!-- Calendar Icon Button -->
+                                <Button x:Name="CalendarButton"
+                                        Command="{Binding ToggleCalendarWidgetCommand}" 
+                                        Style="{StaticResource MaterialDesignIconButton}"
+                                        Background="White"
+                                        Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                        ToolTip="Wybierz tydzień"
+                                        Margin="0,0,20,0">
+                                    <md:PackIcon Kind="Calendar" />
+                                </Button>
+                                
+                                <TextBlock Text="{Binding CurrentWeekTitle}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                                
+                                <!-- Floating Calendar Popup -->
+                                <Popup IsOpen="{Binding IsCalendarWidgetVisible}"
+                                       PlacementTarget="{Binding ElementName=CalendarButton}"
+                                       Placement="Bottom"
+                                       StaysOpen="False"
+                                       AllowsTransparency="True"
+                                       PopupAnimation="Fade">
+                                    <md:Card Background="White" Padding="15">
+                                        <StackPanel>
+                                            <Grid Margin="0,0,0,10">
+                                                <TextBlock Text="Wybierz datę" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+                                                <Button Command="{Binding ToggleCalendarWidgetCommand}" 
+                                                        Style="{StaticResource MaterialDesignIconButton}"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Top"
+                                                        Width="30"
+                                                        Height="30"
+                                                        Padding="0"
+                                                        Foreground="Gray">
+                                                    <md:PackIcon Kind="Close" Width="16" Height="16"/>
+                                                </Button>
+                                            </Grid>
+                                            <Calendar SelectedDate="{Binding SelectedDate, UpdateSourceTrigger=PropertyChanged}"
+                                                     DisplayDate="{Binding CalendarDisplayDate}"
+                                                     SelectionMode="SingleDate"
+                                                     HorizontalAlignment="Center"
+                                                     VerticalAlignment="Center"/>
+                                            <Button Command="{Binding JumpToWeekCommand}" 
+                                                    Content="Przejdź do tygodnia"
+                                                    Style="{StaticResource MaterialDesignRaisedButton}"
+                                                    Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                    Margin="0,10,0,0"
+                                                    HorizontalAlignment="Stretch"/>
+                                        </StackPanel>
+                                    </md:Card>
+                                </Popup>
+                                
+                                <Button Command="{Binding AddManualLessonCommand}" 
+                                        Content="NOWA LEKCJA" 
+                                        Background="White" 
+                                        Foreground="{DynamicResource PrimaryHueMidBrush}" 
+                                        Style="{StaticResource MaterialDesignRaisedButton}"/>
+                            </StackPanel>
+                            
+                            <!-- Next Week Button -->
+                            <Button Grid.Column="2" Command="{Binding NextWeekCommand}" Style="{StaticResource MaterialDesignIconButton}" Foreground="White">
                                 <md:PackIcon Kind="ChevronRight" />
                             </Button>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding CurrentWeekTitle}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
-                                <Button Command="{Binding AddManualLessonCommand}" Content="NOWA LEKCJA" Margin="20,0,0,0" Background="White" Foreground="{DynamicResource PrimaryHueMidBrush}" Style="{StaticResource MaterialDesignRaisedButton}"/>
-                            </StackPanel>
-                        </DockPanel>
+                        </Grid>
                     </md:ColorZone>
 
                     <ItemsControl Grid.Row="1" ItemsSource="{Binding WeekDays}" Margin="0,10,0,0">
@@ -289,15 +443,40 @@
                                 <TextBlock Text="Szczegóły lekcji" FontWeight="Bold" FontSize="16" Margin="0,0,0,10"/>
                                 <Label Content="Grupa:"/>
                                 <ComboBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedLesson.Group}" DisplayMemberPath="Name" Margin="0,0,0,10"/>
-                                <Label Content="Dzień i Godzina:"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <DatePicker SelectedDate="{Binding SelectedLesson.StartTime}" Width="130" Margin="0,0,10,0" Style="{StaticResource MaterialDesignDatePicker}"/>
-                                    <md:TimePicker SelectedTime="{Binding SelectedLesson.StartTime, UpdateSourceTrigger=PropertyChanged}" 
-                                                   Width="100" 
-                                                   Is24Hours="True"/>
-                                </StackPanel>
-                                <Label Content="Status:" Margin="0,10,0,0"/>
-                                <ComboBox ItemsSource="{Binding AllStatuses}" SelectedItem="{Binding SelectedLesson.Status}" Margin="0,0,0,10"/>
+                                
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <Label Content="Dzień" Grid.Row="0" Grid.Column="0" Margin="0,0,5,0"/>
+                                    <Label Content="Od" Grid.Row="0" Grid.Column="1" Margin="5,0,5,0"/>
+                                    <Label Content="Do" Grid.Row="0" Grid.Column="2" Margin="5,0,0,0"/>
+                                    
+                                    <DatePicker Grid.Row="1" Grid.Column="0" 
+                                                SelectedDate="{Binding SelectedLesson.StartTime}" 
+                                                Width="130" 
+                                                Margin="0,5,5,0" 
+                                                Style="{StaticResource MaterialDesignDatePicker}"/>
+                                    <md:TimePicker Grid.Row="1" Grid.Column="1" 
+                                                   SelectedTime="{Binding SelectedLesson.StartTime, UpdateSourceTrigger=PropertyChanged}" 
+                                                   Width="80"
+                                                   Is24Hours="True"
+                                                   Margin="5,5,5,0"
+                                                   md:HintAssist.Hint="Od"/>
+                                    <md:TimePicker Grid.Row="1" Grid.Column="2" 
+                                                   SelectedTime="{Binding SelectedLesson.EndTime, UpdateSourceTrigger=PropertyChanged}" 
+                                                   Width="80"
+                                                   Is24Hours="True"
+                                                   Margin="5,5,0,0"
+                                                   md:HintAssist.Hint="Do"/>
+                                </Grid>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1">
@@ -314,6 +493,676 @@
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
+                    </md:Card>
+                </Grid>
+            </TabItem>
+
+            <TabItem IsEnabled="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                <TabItem.Header>
+                    <StackPanel Margin="5">
+                        <md:PackIcon Kind="Cash" HorizontalAlignment="Center" Width="24" Height="24"/>
+                        <TextBlock Text="FINANSE" HorizontalAlignment="Center" FontSize="10"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left Panel: Wallet Balances -->
+                    <md:Card Grid.Column="0" Margin="0,0,10,0" Padding="15">
+                        <StackPanel>
+                            <TextBlock Text="Stan portfeli uczniów" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                            <ScrollViewer MaxHeight="600" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding FinanceViewModel.WalletBalances}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <md:Card Margin="0,0,0,8" Padding="12" Style="{DynamicResource MaterialDesignOutlinedCard}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding StudentName}" FontWeight="SemiBold" FontSize="14"/>
+                                                        <TextBlock Text="{Binding BalanceDisplay}" 
+                                                                   FontSize="16" 
+                                                                   FontWeight="Bold"
+                                                                   Margin="0,5,0,0">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBody}"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsNegative}" Value="True">
+                                                                            <Setter Property="Foreground" Value="Red"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                    <md:PackIcon Grid.Column="1" 
+                                                                 Kind="AlertCircle" 
+                                                                 Foreground="Red" 
+                                                                 VerticalAlignment="Center"
+                                                                 Visibility="{Binding IsNegative, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                 Width="20" Height="20"/>
+                                                </Grid>
+                                            </md:Card>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </md:Card>
+
+                    <!-- Right Panel: Payments -->
+                    <Grid Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Filters -->
+                        <md:Card Grid.Row="0" Margin="0,0,0,10" Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="Filtry" FontWeight="Bold" Margin="0,0,0,10"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0" 
+                                              ItemsSource="{Binding FinanceViewModel.Students}" 
+                                              SelectedItem="{Binding FinanceViewModel.SelectedStudent}"
+                                              DisplayMemberPath="FullName"
+                                              md:HintAssist.Hint="Wybierz ucznia"
+                                              Margin="0,0,10,0"/>
+                                    <DatePicker Grid.Column="1" 
+                                                SelectedDate="{Binding FinanceViewModel.FilterStartDate}"
+                                                md:HintAssist.Hint="Data od"
+                                                Margin="0,0,10,0"
+                                                Style="{StaticResource MaterialDesignDatePicker}"/>
+                                    <DatePicker Grid.Column="2" 
+                                                SelectedDate="{Binding FinanceViewModel.FilterEndDate}"
+                                                md:HintAssist.Hint="Data do"
+                                                Style="{StaticResource MaterialDesignDatePicker}"/>
+                                </Grid>
+                                <TextBox Text="{Binding FinanceViewModel.SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                         md:HintAssist.Hint="Szukaj..." 
+                                         Margin="0,10,0,0"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                            </StackPanel>
+                        </md:Card>
+
+                        <!-- Payments List -->
+                        <md:Card Grid.Row="1" Padding="0" Margin="0,0,0,10">
+                            <DataGrid ItemsSource="{Binding FinanceViewModel.Payments}"
+                                      SelectedItem="{Binding FinanceViewModel.SelectedPayment}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      HeadersVisibility="Column"
+                                      GridLinesVisibility="All"
+                                      SelectionMode="Single">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Data" Binding="{Binding Date, StringFormat={}{0:dd.MM.yyyy}}" Width="100"/>
+                                    <DataGridTextColumn Header="Uczeń" Binding="{Binding Student.FullName}" Width="*"/>
+                                    <DataGridTextColumn Header="Kwota" Binding="{Binding Amount, StringFormat={}{0:F2} PLN}" Width="120">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Opis" Binding="{Binding Description}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </md:Card>
+
+                        <!-- Payment Entry Form -->
+                        <md:Card Grid.Row="2" Padding="15" Visibility="{Binding FinanceViewModel.SelectedPayment, Converter={StaticResource NullToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="Szczegóły płatności" FontWeight="Bold" FontSize="16" Margin="0,0,0,15"/>
+                                <Label Content="Uczeń:"/>
+                                <ComboBox ItemsSource="{Binding FinanceViewModel.Students}" 
+                                          SelectedItem="{Binding FinanceViewModel.SelectedPayment.Student, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          DisplayMemberPath="FullName"
+                                          Margin="0,0,0,10"/>
+                                <Label Content="Kwota (PLN):"/>
+                                <TextBox Text="{Binding FinanceViewModel.SelectedPayment.Amount, UpdateSourceTrigger=PropertyChanged}" 
+                                         Margin="0,0,0,10"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                <Label Content="Data:"/>
+                                <DatePicker SelectedDate="{Binding FinanceViewModel.SelectedPayment.Date}" 
+                                            Margin="0,0,0,10"
+                                            Style="{StaticResource MaterialDesignDatePicker}"/>
+                                <Label Content="Opis:"/>
+                                <TextBox Text="{Binding FinanceViewModel.SelectedPayment.Description, UpdateSourceTrigger=PropertyChanged}" 
+                                         TextWrapping="Wrap"
+                                         AcceptsReturn="True"
+                                         MinHeight="60"
+                                         Margin="0,0,0,15"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Zapisz" Command="{Binding FinanceViewModel.SavePaymentCommand}" 
+                                            Style="{StaticResource ActionButtonStyle}"/>
+                                    <Button Content="Anuluj" Command="{Binding FinanceViewModel.CancelPaymentCommand}" 
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Margin="0,0,10,0"
+                                            Visibility="{Binding FinanceViewModel.IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    <Button Content="Usuń" Command="{Binding FinanceViewModel.DeletePaymentCommand}" 
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Foreground="Red"
+                                            HorizontalAlignment="Right"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </md:Card>
+
+                        <!-- Add Payment Button (when no payment selected) -->
+                        <Button Grid.Row="2" 
+                                Content="Dodaj płatność" 
+                                Command="{Binding FinanceViewModel.AddPaymentCommand}"
+                                Style="{DynamicResource MaterialDesignRaisedButton}"
+                                HorizontalAlignment="Left"
+                                Visibility="{Binding FinanceViewModel.SelectedPayment, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverted}"/>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem IsEnabled="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                <TabItem.Header>
+                    <StackPanel Margin="5">
+                        <md:PackIcon Kind="BookOpen" HorizontalAlignment="Center" Width="24" Height="24"/>
+                        <TextBlock Text="PRZEGLĄD LEKCJI" HorizontalAlignment="Center" FontSize="10"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="400"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left Panel: Group Filter and Lesson List -->
+                    <md:Card Grid.Column="0" Margin="0,0,10,0" Padding="15">
+                        <StackPanel>
+                            <!-- Group Filter with Filter Icon -->
+                            <Grid Margin="0,0,0,15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0" 
+                                          ItemsSource="{Binding LessonBrowserViewModel.Groups}" 
+                                          SelectedItem="{Binding LessonBrowserViewModel.SelectedGroupFilter}"
+                                          Margin="0,0,10,0">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock>
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding Name}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                                                <Setter Property="Text" Value="Wszystkie"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <Button x:Name="FilterButton"
+                                        Grid.Column="1" 
+                                        Command="{Binding LessonBrowserViewModel.ToggleFiltersPopupCommand}"
+                                        Style="{StaticResource MaterialDesignIconButton}"
+                                        ToolTip="Filtry">
+                                    <md:PackIcon Kind="Filter" Width="24" Height="24"/>
+                                </Button>
+                            </Grid>
+                            
+                            <!-- Filters Popup -->
+                            <Popup IsOpen="{Binding LessonBrowserViewModel.IsFiltersPopupVisible}"
+                                   Placement="Bottom"
+                                   StaysOpen="False"
+                                   PopupAnimation="Slide">
+                                <Popup.PlacementTarget>
+                                    <Binding ElementName="FilterButton"/>
+                                </Popup.PlacementTarget>
+                                <Border Background="{DynamicResource MaterialDesignPaper}"
+                                        BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                        BorderThickness="2"
+                                        CornerRadius="4"
+                                        Effect="{DynamicResource MaterialDesignShadowDepth3}">
+                                    <md:Card Padding="15" MinWidth="350" Style="{DynamicResource MaterialDesignOutlinedCard}">
+                                        <StackPanel>
+                                            <TextBlock Text="Filtry" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
+                                            
+                                            <Label Content="Status:"/>
+                                            <ComboBox ItemsSource="{Binding LessonBrowserViewModel.AllStatuses}" 
+                                                      SelectedItem="{Binding LessonBrowserViewModel.SelectedStatusFilter}"
+                                                      Margin="0,0,0,10">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                            
+                                            <Label Content="Data od:"/>
+                                            <DatePicker SelectedDate="{Binding LessonBrowserViewModel.FilterStartDate}" 
+                                                        Margin="0,0,0,10"
+                                                        Style="{StaticResource MaterialDesignDatePicker}"/>
+                                            
+                                            <Label Content="Data do:"/>
+                                            <DatePicker SelectedDate="{Binding LessonBrowserViewModel.FilterEndDate}" 
+                                                        Margin="0,0,0,10"
+                                                        Style="{StaticResource MaterialDesignDatePicker}"/>
+                                            
+                                            <CheckBox Content="Tylko lekcje bez frekwencji" 
+                                                      IsChecked="{Binding LessonBrowserViewModel.ShowMissingAttendanceOnly}"
+                                                      Margin="0,0,0,0"/>
+                                        </StackPanel>
+                                    </md:Card>
+                                </Border>
+                            </Popup>
+                            
+                            <!-- Lesson List -->
+                            <TextBlock Text="Lista lekcji:" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <ScrollViewer MaxHeight="600" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding LessonBrowserViewModel.Lessons}">
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <md:Card Padding="15" 
+                                                    Style="{DynamicResource MaterialDesignOutlinedCard}" 
+                                                    HorizontalAlignment="Stretch"
+                                                    Margin="0,0,0,8"
+                                                    Cursor="Hand"
+                                                    MouseLeftButtonDown="LessonCard_MouseLeftButtonDown">
+                                                <md:Card.Tag>
+                                                    <Binding/>
+                                                </md:Card.Tag>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="120"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    
+                                                    <!-- Date and Time -->
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding StartTime, StringFormat={}{0:dd.MM.yyyy}}" 
+                                                                   FontWeight="Bold" 
+                                                                   FontSize="12"
+                                                                   Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                                        <TextBlock Text="{Binding StartTime, StringFormat={}{0:HH:mm}}" 
+                                                                   FontSize="18" 
+                                                                   FontWeight="Bold"
+                                                                   Margin="0,4,0,0"/>
+                                                    </StackPanel>
+                                                    
+                                                    <!-- Group Name and Status -->
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="15,0,0,0">
+                                                        <TextBlock Text="{Binding Group.Name}" 
+                                                                   FontSize="16" 
+                                                                   FontWeight="SemiBold"
+                                                                   Margin="0,0,0,6"/>
+                                                        <TextBlock FontSize="13">
+                                                            <Run Text="Status: " Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                                                            <Run Text="{Binding Status}" FontWeight="SemiBold"/>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                    
+                                                    <!-- Chevron Icon -->
+                                                    <md:PackIcon Grid.Column="2" 
+                                                                 Kind="ChevronRight" 
+                                                                 VerticalAlignment="Center"
+                                                                 Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                                                 Width="24" Height="24"/>
+                                                </Grid>
+                                            </md:Card>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </md:Card>
+
+                    <!-- Right Panel: Attendance Entry -->
+                    <Grid Grid.Column="1">
+                        <TextBlock Text="Wybierz lekcję z listy" 
+                                   VerticalAlignment="Center" 
+                                   HorizontalAlignment="Center" 
+                                   Foreground="Gray"
+                                   FontSize="16"
+                                   Visibility="{Binding LessonBrowserViewModel.SelectedLesson, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverted}"/>
+                        
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" 
+                                      Visibility="{Binding LessonBrowserViewModel.SelectedLesson, Converter={StaticResource NullToVisibilityConverter}}">
+                            <StackPanel>
+                                <!-- Lesson Info -->
+                                <md:Card Margin="0,0,0,15" Padding="15">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,10">
+                                            <TextBlock Text="Szczegóły lekcji" FontSize="18" FontWeight="Bold"/>
+                                            <md:PackIcon Kind="AlertCircle" 
+                                                         Foreground="Orange" 
+                                                         HorizontalAlignment="Right"
+                                                         VerticalAlignment="Center"
+                                                         Width="24" Height="24"
+                                                         ToolTip="Brakująca frekwencja"
+                                                         Visibility="{Binding LessonBrowserViewModel.HasMissingAttendance, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        </Grid>
+                                        <TextBlock>
+                                            <Run Text="Data: " FontWeight="Bold"/>
+                                            <Run Text="{Binding LessonBrowserViewModel.SelectedLesson.StartTime, StringFormat={}{0:dd.MM.yyyy HH:mm}}"/>
+                                        </TextBlock>
+                                        <TextBlock Margin="0,5,0,0">
+                                            <Run Text="Grupa: " FontWeight="Bold"/>
+                                            <Run Text="{Binding LessonBrowserViewModel.SelectedLesson.Group.Name}"/>
+                                        </TextBlock>
+                                        <Grid Margin="0,10,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Label Content="Status:" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <ComboBox Grid.Column="1" 
+                                                      ItemsSource="{Binding LessonBrowserViewModel.AllStatuses}" 
+                                                      SelectedItem="{Binding LessonBrowserViewModel.SelectedLesson.Status, Mode=TwoWay}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </Grid>
+                                    </StackPanel>
+                                </md:Card>
+
+                                <!-- Attendance Entry -->
+                                <md:Card Padding="15">
+                                    <StackPanel>
+                                        <TextBlock Text="Frekwencja" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                                        
+                                        <ItemsControl ItemsSource="{Binding LessonBrowserViewModel.SelectedLessonAttendances}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <md:Card Margin="0,0,0,10" Padding="12" Style="{DynamicResource MaterialDesignOutlinedCard}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="200"/>
+                                                                <ColumnDefinition Width="150"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="{Binding StudentName}" 
+                                                                       FontWeight="SemiBold" 
+                                                                       VerticalAlignment="Center"
+                                                                       Grid.Column="0"/>
+                                                            <ComboBox Grid.Column="1" 
+                                                                      ItemsSource="{Binding Source={StaticResource AttendanceStatusEnum}}"
+                                                                      SelectedItem="{Binding Status, Mode=TwoWay}"
+                                                                      Margin="10,0">
+                                                                <ComboBox.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <TextBlock Text="{Binding}"/>
+                                                                    </DataTemplate>
+                                                                </ComboBox.ItemTemplate>
+                                                            </ComboBox>
+                                                            <TextBlock Grid.Column="2" 
+                                                                       Text="{Binding PriceChargedDisplay}" 
+                                                                       FontWeight="Bold"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Right"
+                                                                       Margin="10,0,0,0"/>
+                                                        </Grid>
+                                                    </md:Card>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        
+                                        <StackPanel Orientation="Horizontal" Margin="0,15,0,0" HorizontalAlignment="Right">
+                                            <Button Content="Anuluj" 
+                                                    Command="{Binding LessonBrowserViewModel.CancelAttendancesCommand}"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Margin="0,0,10,0"
+                                                    Visibility="{Binding LessonBrowserViewModel.IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                            <Button Content="Zakończ raport lekcji" 
+                                                    Command="{Binding LessonBrowserViewModel.CompleteLessonReportCommand}"
+                                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </md:Card>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem IsEnabled="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
+                <TabItem.Header>
+                    <StackPanel Margin="5">
+                        <md:PackIcon Kind="FileDocument" HorizontalAlignment="Center" Width="24" Height="24"/>
+                        <TextBlock Text="RAPORTY" HorizontalAlignment="Center" FontSize="10"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Report Configuration -->
+                    <md:Card Grid.Row="0" Margin="0,0,0,10" Padding="15">
+                        <StackPanel>
+                            <TextBlock Text="Generuj raport" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Label Content="Typ raportu:" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <ComboBox Grid.Column="1" 
+                                          ItemsSource="{Binding ReportViewModel.ReportTypes}" 
+                                          SelectedItem="{Binding ReportViewModel.SelectedReportType}"
+                                          Margin="0,0,10,0"/>
+                                <Label Content="Data od:" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <DatePicker Grid.Column="3" 
+                                            SelectedDate="{Binding ReportViewModel.ReportStartDate}"
+                                            Margin="0,0,10,0"
+                                            Style="{StaticResource MaterialDesignDatePicker}"/>
+                                <Label Content="Data do:" Grid.Column="4" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <DatePicker Grid.Column="5" 
+                                            SelectedDate="{Binding ReportViewModel.ReportEndDate}"
+                                            Margin="0,0,10,0"
+                                            Style="{StaticResource MaterialDesignDatePicker}"/>
+                                <Button Grid.Column="6" 
+                                        Content="Generuj" 
+                                        Command="{Binding ReportViewModel.GenerateReportCommand}"
+                                        Style="{StaticResource ActionButtonStyle}"/>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" Margin="0,15,0,0" HorizontalAlignment="Right">
+                                <Button Content="Eksportuj do PDF" 
+                                        Command="{Binding ReportViewModel.ExportToPdfCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Margin="0,0,10,0"/>
+                                <Button Content="Eksportuj do CSV" 
+                                        Command="{Binding ReportViewModel.ExportToCsvCommand}"
+                                        Style="{StaticResource MaterialDesignRaisedButton}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </md:Card>
+
+                    <!-- Report Preview -->
+                    <md:Card Grid.Row="1" Padding="0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ContentControl Content="{Binding ReportViewModel.CurrentReport}">
+                                <ContentControl.Resources>
+                                    <!-- Revenue Report Template -->
+                                    <DataTemplate DataType="{x:Type models:RevenueReportDto}">
+                                        <StackPanel Margin="15">
+                                            <TextBlock Text="{Binding StartDate, StringFormat={}Okres: {0:dd.MM.yyyy} - }" FontSize="16" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding EndDate, StringFormat={}{0:dd.MM.yyyy}}" FontSize="16" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding TotalRevenue, StringFormat={}Całkowity przychód: {0:F2} PLN}" FontSize="14" Margin="0,10,0,5"/>
+                                            <TextBlock Text="{Binding TotalLessons, StringFormat={}Liczba lekcji: {0}}" FontSize="14" Margin="0,5,0,10"/>
+                                            <TextBlock Text="Przychód według grup:" FontWeight="Bold" Margin="0,10,0,5"/>
+                                            <ItemsControl ItemsSource="{Binding RevenueByGroup}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Margin="0,5,0,0">
+                                                            <Run Text="{Binding GroupName}"/>
+                                                            <Run Text=": "/>
+                                                            <Run Text="{Binding Revenue, StringFormat={}{0:F2} PLN}"/>
+                                                            <Run Text=" ("/>
+                                                            <Run Text="{Binding LessonCount}"/>
+                                                            <Run Text=" lekcji)"/>
+                                                        </TextBlock>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+
+                                    <!-- Attendance Report Template -->
+                                    <DataTemplate DataType="{x:Type models:AttendanceReportDto}">
+                                        <StackPanel Margin="15">
+                                            <TextBlock Text="{Binding StartDate, StringFormat={}Okres: {0:dd.MM.yyyy} - }" FontSize="16" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding EndDate, StringFormat={}{0:dd.MM.yyyy}}" FontSize="16" FontWeight="Bold"/>
+                                            <TextBlock Text="Podsumowanie:" FontWeight="Bold" Margin="0,10,0,5"/>
+                                            <TextBlock Text="{Binding TotalPresent, StringFormat={}Obecni: {0}}" FontSize="14" Margin="0,5,0,0"/>
+                                            <TextBlock Text="{Binding TotalAbsentPaid, StringFormat={}Nieobecni (płatne): {0}}" FontSize="14" Margin="0,5,0,0"/>
+                                            <TextBlock Text="{Binding TotalAbsentFree, StringFormat={}Nieobecni (darmowe): {0}}" FontSize="14" Margin="0,5,0,0"/>
+                                            <TextBlock Text="{Binding TotalLate, StringFormat={}Spóźnieni: {0}}" FontSize="14" Margin="0,5,0,10"/>
+                                            <TextBlock Text="Frekwencja według uczniów:" FontWeight="Bold" Margin="0,10,0,5"/>
+                                            <ItemsControl ItemsSource="{Binding AttendanceByStudent}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Margin="0,5,0,0">
+                                                            <TextBlock Text="{Binding StudentName}" FontWeight="SemiBold"/>
+                                                            <TextBlock Margin="10,2,0,0">
+                                                                <Run Text="Obecni: "/>
+                                                                <Run Text="{Binding Present}"/>
+                                                                <Run Text=", Nieobecni (płatne): "/>
+                                                                <Run Text="{Binding AbsentPaid}"/>
+                                                                <Run Text=", Nieobecni (darmowe): "/>
+                                                                <Run Text="{Binding AbsentFree}"/>
+                                                                <Run Text=", Spóźnieni: "/>
+                                                                <Run Text="{Binding Late}"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+
+                                    <!-- Wallet Report Template -->
+                                    <DataTemplate DataType="{x:Type models:WalletReportDto}">
+                                        <StackPanel Margin="15">
+                                            <TextBlock Text="{Binding GeneratedDate, StringFormat={}Data wygenerowania: {0:dd.MM.yyyy HH:mm}}" FontSize="16" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding TotalPositiveBalance, StringFormat={}Całkowity dodatni bilans: {0:F2} PLN}" FontSize="14" Margin="0,10,0,5"/>
+                                            <TextBlock Text="{Binding TotalNegativeBalance, StringFormat={}Całkowity ujemny bilans: {0:F2} PLN}" FontSize="14" Margin="0,5,0,10"/>
+                                            <TextBlock Text="Portfele uczniów:" FontWeight="Bold" Margin="0,10,0,5"/>
+                                            <ItemsControl ItemsSource="{Binding StudentWallets}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Margin="0,5,0,0">
+                                                            <TextBlock Text="{Binding StudentName}" FontWeight="SemiBold"/>
+                                                            <TextBlock Margin="10,2,0,0">
+                                                                <Run Text="Bilans: "/>
+                                                                <Run Text="{Binding Balance, StringFormat={}{0:F2} PLN}"/>
+                                                                <Run Text=" (Wpłaty: "/>
+                                                                <Run Text="{Binding TotalPayments, StringFormat={}{0:F2} PLN}"/>
+                                                                <Run Text=", Opłaty: "/>
+                                                                <Run Text="{Binding TotalCharges, StringFormat={}{0:F2} PLN}"/>
+                                                                <Run Text=")"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+
+                                    <!-- Lesson Report Template -->
+                                    <DataTemplate DataType="{x:Type models:LessonReportDto}">
+                                        <StackPanel Margin="15">
+                                            <TextBlock Text="{Binding StartDate, StringFormat={}Okres: {0:dd.MM.yyyy} - }" FontSize="16" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding EndDate, StringFormat={}{0:dd.MM.yyyy}}" FontSize="16" FontWeight="Bold"/>
+                                            <TextBlock Text="Podsumowanie:" FontWeight="Bold" Margin="0,10,0,5"/>
+                                            <TextBlock Text="{Binding TotalLessons, StringFormat={}Wszystkie lekcje: {0}}" FontSize="14" Margin="0,5,0,0"/>
+                                            <TextBlock Text="{Binding CompletedLessons, StringFormat={}Zakończone: {0}}" FontSize="14" Margin="0,5,0,0"/>
+                                            <TextBlock Text="{Binding ScheduledLessons, StringFormat={}Zaplanowane: {0}}" FontSize="14" Margin="0,5,0,0"/>
+                                            <TextBlock Text="{Binding CanceledLessons, StringFormat={}Anulowane: {0}}" FontSize="14" Margin="0,5,0,0"/>
+                                            <TextBlock Text="{Binding HolidayLessons, StringFormat={}Święta: {0}}" FontSize="14" Margin="0,5,0,10"/>
+                                            <TextBlock Text="Lekcje według grup:" FontWeight="Bold" Margin="0,10,0,5"/>
+                                            <ItemsControl ItemsSource="{Binding LessonsByGroup}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Margin="0,5,0,0">
+                                                            <TextBlock Text="{Binding GroupName}" FontWeight="SemiBold"/>
+                                                            <TextBlock Margin="10,2,0,0">
+                                                                <Run Text="Wszystkie: "/>
+                                                                <Run Text="{Binding Total}"/>
+                                                                <Run Text=", Zakończone: "/>
+                                                                <Run Text="{Binding Completed}"/>
+                                                                <Run Text=", Zaplanowane: "/>
+                                                                <Run Text="{Binding Scheduled}"/>
+                                                                <Run Text=", Anulowane: "/>
+                                                                <Run Text="{Binding Canceled}"/>
+                                                                <Run Text=", Święta: "/>
+                                                                <Run Text="{Binding Holiday}"/>
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ContentControl.Resources>
+                                <ContentControl.Style>
+                                    <Style TargetType="ContentControl">
+                                        <Setter Property="ContentTemplate">
+                                            <Setter.Value>
+                                                <DataTemplate>
+                                                    <TextBlock Text="Wygeneruj raport, aby zobaczyć podgląd" 
+                                                               HorizontalAlignment="Center" 
+                                                               VerticalAlignment="Center"
+                                                               Foreground="Gray"
+                                                               FontSize="16"/>
+                                                </DataTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                                <Setter Property="ContentTemplate">
+                                                    <Setter.Value>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="Wygeneruj raport, aby zobaczyć podgląd" 
+                                                                       HorizontalAlignment="Center" 
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="Gray"
+                                                                       FontSize="16"/>
+                                                        </DataTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ContentControl.Style>
+                            </ContentControl>
+                        </ScrollViewer>
                     </md:Card>
                 </Grid>
             </TabItem>

@@ -12,6 +12,7 @@ namespace Learning_Management_System.Models
 
         public enum AttendanceStatus
         {
+            None,
             Present,
             AbsentPaid,
             AbsentFree,
