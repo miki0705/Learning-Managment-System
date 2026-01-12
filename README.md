@@ -4,6 +4,7 @@ A desktop-based management system tailored for private tutoring and language sch
 
 ---
 
+
 ## User-Centric Features
 
 The application focuses on teacher productivity through intuitive UX and automated workflows.
