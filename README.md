@@ -10,23 +10,33 @@ A desktop-based management system tailored for private tutoring and language sch
 The application focuses on teacher productivity through intuitive UX and automated workflows.
 
 ### Interactive Weekly Calendar
-![Weekly Calendar](docs/calendar-view.png)
+<p align="center">
+  <img src="docs/calendar-view.PNG" width="85%" />
+</p>
 Visual dashboard for effortless browsing and managing lessons. Allows for a quick overview of the entire week with status indicators for different lesson types, ensuring clear visibility of the schedule.
 
 ### Automated Schedule Engine and Smart Sync
-![Schedule Sync](docs/schedule-sync.png)
+<p align="center">
+  <img src="docs/schedule-sync.PNG" width="50%" />
+</p>
 Recurring time slots automatically generate lessons for the entire school year. Any schedule change is instantly propagated to future lessons while preserving historical logs and attendance records to maintain data consistency.
 
 ### Advanced Filtering and Search System
-![Search and Filters](docs/filtering.png)
+<p align="center">
+  <img src="docs/filtering.PNG" width="50%" />
+</p>
 To handle large datasets efficiently, the application includes comprehensive search fields and multi-criteria filters. Teachers can quickly locate specific students, lessons, or transactions, significantly reducing administrative overhead.
 
 ### Smart State Management and Validation
-![Form Validation](docs/validation.png)
+<p align="center">
+  <img src="docs/validation.PNG" width="75%" />
+</p>
 Navigation controls are intelligently disabled during edit mode to prevent accidental data loss. Robust input validation ensures prices, dates, and student records are accurate and conform to required formats.
 
 ### Flexible Pricing and One-Click Settlements
-![Billing Logic](docs/billing.png)
+<p align="center">
+  <img src="docs/billing.PNG" width="75%" />
+</p>
 Support for Individual Rate Overrides allows for customized pricing for specific students. Marking attendance automatically triggers balance updates, seamlessly handling presence and "Paid Absence" scenarios in real-time.
 
 ---
