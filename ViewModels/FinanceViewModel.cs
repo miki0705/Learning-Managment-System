@@ -39,6 +39,7 @@ namespace Learning_Management_System.ViewModels
             SavePaymentCommand = new RelayCommand(async o => await SavePaymentAsync(), o => IsDirty && SelectedPayment != null);
             DeletePaymentCommand = new RelayCommand(async o => await DeletePaymentAsync(), o => SelectedPayment != null && !IsDirty);
             CancelPaymentCommand = new RelayCommand(o => CancelPaymentChanges(), o => IsDirty && SelectedPayment != null);
+            ResetFiltersCommand = new RelayCommand(async o => await ResetFiltersAsync());
 
             _ = LoadPaymentsAsync();
             _ = LoadWalletBalancesAsync();
@@ -82,7 +83,10 @@ namespace Learning_Management_System.ViewModels
                 if (_selectedStudent == value) return;
                 _selectedStudent = value;
                 OnPropertyChanged();
-                _ = LoadPaymentsAsync();
+                if (!_isInternalUpdate)
+                {
+                    _ = LoadPaymentsAsync();
+                }
             }
         }
 
@@ -94,7 +98,10 @@ namespace Learning_Management_System.ViewModels
                 if (_filterStartDate == value) return;
                 _filterStartDate = value;
                 OnPropertyChanged();
-                _ = LoadPaymentsAsync();
+                if (!_isInternalUpdate)
+                {
+                    _ = LoadPaymentsAsync();
+                }
             }
         }
 
@@ -106,7 +113,10 @@ namespace Learning_Management_System.ViewModels
                 if (_filterEndDate == value) return;
                 _filterEndDate = value;
                 OnPropertyChanged();
-                _ = LoadPaymentsAsync();
+                if (!_isInternalUpdate)
+                {
+                    _ = LoadPaymentsAsync();
+                }
             }
         }
 
@@ -118,7 +128,10 @@ namespace Learning_Management_System.ViewModels
                 if (_searchText == value) return;
                 _searchText = value;
                 OnPropertyChanged();
-                ApplyFilter();
+                if (!_isInternalUpdate)
+                {
+                    ApplyFilter();
+                }
             }
         }
 
@@ -130,14 +143,18 @@ namespace Learning_Management_System.ViewModels
                 if (_isDirty == value) return;
                 _isDirty = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsBlocked));
                 CommandManager.InvalidateRequerySuggested();
             }
         }
+
+        public bool IsBlocked => IsDirty;
 
         public ICommand AddPaymentCommand { get; }
         public ICommand SavePaymentCommand { get; }
         public ICommand DeletePaymentCommand { get; }
         public ICommand CancelPaymentCommand { get; }
+        public ICommand ResetFiltersCommand { get; }
 
         private void OnPaymentPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
@@ -295,6 +312,36 @@ namespace Learning_Management_System.ViewModels
             {
                 WalletBalances.Add(item);
             }
+        }
+
+        public void RefreshStudents()
+        {
+            var currentSelectedId = SelectedStudent?.Id;
+            var allStudents = _studentService.GetAllStudents().ToList();
+            Students.Clear();
+            foreach (var student in allStudents)
+            {
+                Students.Add(student);
+            }
+            
+            // Restore selected student if it still exists
+            if (currentSelectedId.HasValue)
+            {
+                SelectedStudent = Students.FirstOrDefault(s => s.Id == currentSelectedId.Value);
+            }
+        }
+
+        private async Task ResetFiltersAsync()
+        {
+            _isInternalUpdate = true;
+            SelectedStudent = null;
+            FilterStartDate = null;
+            FilterEndDate = null;
+            SearchText = string.Empty;
+            _isInternalUpdate = false;
+            
+            // Load all payments after resetting filters
+            await LoadPaymentsAsync();
         }
     }
 

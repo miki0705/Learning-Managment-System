@@ -184,9 +184,12 @@ namespace Learning_Management_System.ViewModels
                 if (_isDirty == value) return;
                 _isDirty = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsBlocked));
                 CommandManager.InvalidateRequerySuggested();
             }
         }
+
+        public bool IsBlocked => IsDirty;
 
         public bool HasMissingAttendance
         {

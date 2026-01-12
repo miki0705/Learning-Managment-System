@@ -138,9 +138,10 @@ namespace Learning_Management_System.ViewModels
 
         /// <summary>
         /// Returns true when the UI should be blocked (tabs and group selection disabled).
-        /// This happens when either IsDirty is true OR IsEditingMembers is true.
+        /// This happens when either IsDirty is true, IsEditingMembers is true, 
+        /// FinanceViewModel is blocked, or LessonBrowserViewModel is blocked.
         /// </summary>
-        public bool IsBlocked => IsDirty || IsEditingMembers;
+        public bool IsBlocked => IsDirty || IsEditingMembers || FinanceViewModel.IsBlocked || LessonBrowserViewModel.IsBlocked;
 
         public string CurrentWeekTitle => $"{_currentWeekStart:dd.MM} - {_currentWeekStart.AddDays(6):dd.MM.yyyy}";
 
@@ -212,6 +213,7 @@ namespace Learning_Management_System.ViewModels
         public ICommand SelectLessonCommand { get; }
         public ICommand DeleteLessonCommand { get; }
         public ICommand SaveLessonCommand { get; }
+        public ICommand CancelLessonCommand { get; }
         public ICommand AddManualLessonCommand { get; }
         #endregion
 
@@ -238,6 +240,10 @@ namespace Learning_Management_System.ViewModels
             FinanceViewModel = new FinanceViewModel(paymentService, studentService);
             LessonBrowserViewModel = new LessonBrowserViewModel(lessonService, attendanceService, groupService, paymentService);
             ReportViewModel = new ReportViewModel(reportService, exportService);
+
+            // Subscribe to PropertyChanged events to update IsBlocked when child ViewModels' IsBlocked changes
+            FinanceViewModel.PropertyChanged += OnChildViewModelPropertyChanged;
+            LessonBrowserViewModel.PropertyChanged += OnChildViewModelPropertyChanged;
 
             BackupDatabaseCommand = new RelayCommand(async o => await BackupDatabaseAsync());
             RestoreDatabaseCommand = new RelayCommand(async o => await RestoreDatabaseAsync());
@@ -279,6 +285,7 @@ namespace Learning_Management_System.ViewModels
 
             DeleteLessonCommand = new RelayCommand(async o => await DeleteLessonAsync(), o => SelectedLesson != null);
             SaveLessonCommand = new RelayCommand(async o => await SaveLessonAsync(), o => IsDirty && SelectedLesson != null);
+            CancelLessonCommand = new RelayCommand(async o => await CancelLessonChangesAsync(), o => IsDirty && SelectedLesson != null);
             AddManualLessonCommand = new RelayCommand(o => AddManualLesson());
 
             SetInitialWeek();
@@ -295,6 +302,18 @@ namespace Learning_Management_System.ViewModels
         {
             if (_isInternalUpdate) return;
             IsDirty = true;
+        }
+
+        private void OnChildViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // When IsBlocked or IsDirty changes in child ViewModels, notify that MainViewModel.IsBlocked has changed
+            if (e.PropertyName == nameof(FinanceViewModel.IsBlocked) || 
+                e.PropertyName == nameof(FinanceViewModel.IsDirty) ||
+                e.PropertyName == nameof(LessonBrowserViewModel.IsBlocked) || 
+                e.PropertyName == nameof(LessonBrowserViewModel.IsDirty))
+            {
+                OnPropertyChanged(nameof(IsBlocked));
+            }
         }
 
         private void RefreshList()
@@ -334,6 +353,24 @@ namespace Learning_Management_System.ViewModels
             if (SelectedStudent.Id == 0) _studentService.AddStudent(SelectedStudent);
             _studentService.SaveChanges();
             IsDirty = false;
+            
+            // Reload Students collection from database
+            var allStudents = _studentService.GetAllStudents().ToList();
+            Students.Clear();
+            foreach (var student in allStudents)
+            {
+                Students.Add(student);
+            }
+            
+            // Refresh FinanceViewModel students list
+            FinanceViewModel.RefreshStudents();
+            
+            // If currently editing group members, refresh the student selection list
+            if (IsEditingMembers)
+            {
+                RefreshGroupMemberSelection();
+            }
+            
             RefreshList();
         }
 
@@ -371,6 +408,15 @@ namespace Learning_Management_System.ViewModels
                 Students.Remove(SelectedStudent);
                 SelectedStudent = null;
                 IsDirty = false;
+                
+                // Refresh FinanceViewModel students list
+                FinanceViewModel.RefreshStudents();
+                
+                // If currently editing group members, refresh the student selection list
+                if (IsEditingMembers)
+                {
+                    RefreshGroupMemberSelection();
+                }
             }
         }
         #endregion
@@ -563,6 +609,28 @@ namespace Learning_Management_System.ViewModels
             IsEditingMembers = true;
         }
 
+        private void RefreshGroupMemberSelection()
+        {
+            if (!IsEditingMembers || SelectedGroup == null || SelectedGroup.Id == 0) return;
+
+            // Preserve current selections
+            var selectedIds = _allStudentsFullList.Where(s => s.IsSelected).Select(s => s.Student.Id).ToList();
+            
+            _allStudentsFullList.Clear();
+
+            // Pobieramy ID aktualnych członków
+            var currentMemberIds = SelectedGroup.Enrollments.Select(e => e.StudentId).ToList();
+
+            foreach (var student in Students)
+            {
+                // Check if this student was previously selected or is a current member
+                var isSelected = selectedIds.Contains(student.Id) || currentMemberIds.Contains(student.Id);
+                _allStudentsFullList.Add(new StudentSelection(student, isSelected));
+            }
+
+            ApplyFilter();
+        }
+
         private async Task SaveMembersAsync()
         {
             if (SelectedGroup == null) return;
@@ -666,6 +734,41 @@ namespace Learning_Management_System.ViewModels
             IsDirty = false;
             await LoadWeekDataAsync();
             await LessonBrowserViewModel.LoadLessonsAsync();
+        }
+
+        private async Task CancelLessonChangesAsync()
+        {
+            if (SelectedLesson == null) return;
+            _isInternalUpdate = true;
+            if (_lessonService.IsNew(SelectedLesson))
+            {
+                // If it's a new lesson, just remove it from the selection
+                SelectedLesson = null;
+            }
+            else
+            {
+                // Save the lesson ID before reloading
+                int lessonId = SelectedLesson.Id;
+                
+                // Reload the lesson entity from database to discard changes
+                _lessonService.ReloadLesson(SelectedLesson);
+                
+                // Reload week data to refresh the calendar view
+                await LoadWeekDataAsync();
+                
+                // Find and reselect the lesson from the reloaded collection (if it's in current week)
+                var reloadedLesson = WeekDays
+                    .SelectMany(d => d.Lessons)
+                    .FirstOrDefault(l => l.Id == lessonId);
+                
+                SelectedLesson = null;
+                if (reloadedLesson != null)
+                {
+                    SelectedLesson = reloadedLesson;
+                }
+            }
+            _isInternalUpdate = false;
+            IsDirty = false;
         }
 
         private async Task DeleteLessonAsync()

@@ -487,7 +487,7 @@
                             <StackPanel Grid.Column="2" VerticalAlignment="Bottom" Margin="20,0,0,0">
                                 <Button Content="ZAPISZ" Command="{Binding SaveLessonCommand}" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,10"/>
                                 <StackPanel Orientation="Horizontal">
-                                    <Button Content="Anuluj" Command="{Binding SelectLessonCommand}" CommandParameter="{x:Null}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,10,0"/>
+                                    <Button Content="Anuluj" Command="{Binding CancelLessonCommand}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,10,0"/>
                                     <Button Content="Usuń" Command="{Binding DeleteLessonCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="Red"
                                             IsEnabled="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}"/>
                                 </StackPanel>
@@ -566,9 +566,20 @@
                         </Grid.RowDefinitions>
 
                         <!-- Filters -->
-                        <md:Card Grid.Row="0" Margin="0,0,0,10" Padding="15">
+                        <md:Card Grid.Row="0" Margin="0,0,0,10" Padding="15" IsEnabled="{Binding FinanceViewModel.IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
                             <StackPanel>
-                                <TextBlock Text="Filtry" FontWeight="Bold" Margin="0,0,0,10"/>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Filtry" FontWeight="Bold" Grid.Column="0"/>
+                                    <Button Content="Resetuj filtry" 
+                                            Command="{Binding FinanceViewModel.ResetFiltersCommand}"
+                                            Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                            Grid.Column="1"
+                                            Padding="10,5"/>
+                                </Grid>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -599,7 +610,7 @@
                         </md:Card>
 
                         <!-- Payments List -->
-                        <md:Card Grid.Row="1" Padding="0" Margin="0,0,0,10">
+                        <md:Card Grid.Row="1" Padding="0" Margin="0,0,0,10" IsEnabled="{Binding FinanceViewModel.IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
                             <DataGrid ItemsSource="{Binding FinanceViewModel.Payments}"
                                       SelectedItem="{Binding FinanceViewModel.SelectedPayment}"
                                       AutoGenerateColumns="False"
@@ -667,7 +678,8 @@
                                 Command="{Binding FinanceViewModel.AddPaymentCommand}"
                                 Style="{DynamicResource MaterialDesignRaisedButton}"
                                 HorizontalAlignment="Left"
-                                Visibility="{Binding FinanceViewModel.SelectedPayment, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverted}"/>
+                                Visibility="{Binding FinanceViewModel.SelectedPayment, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverted}"
+                                IsEnabled="{Binding FinanceViewModel.IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}"/>
                     </Grid>
                 </Grid>
             </TabItem>
@@ -686,7 +698,7 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Left Panel: Group Filter and Lesson List -->
-                    <md:Card Grid.Column="0" Margin="0,0,10,0" Padding="15">
+                    <md:Card Grid.Column="0" Margin="0,0,10,0" Padding="15" IsEnabled="{Binding LessonBrowserViewModel.IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}">
                         <StackPanel>
                             <!-- Group Filter with Filter Icon -->
                             <Grid Margin="0,0,0,15">

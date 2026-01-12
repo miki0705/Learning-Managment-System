@@ -140,5 +140,22 @@ namespace Learning_Management_System.Services
             // Update wallets from lesson
             await paymentService.UpdateWalletsFromLessonAsync(lessonId);
         }
+
+        public void ReloadLesson(Lesson lesson)
+        {
+            if (lesson == null || lesson.Id == 0) return;
+
+            var entry = _context.Entry(lesson);
+            if (entry.State == EntityState.Detached) return;
+
+            entry.Reload();
+            entry.Reference(l => l.Group).Load();
+        }
+
+        public bool IsNew(Lesson lesson)
+        {
+            if (lesson == null) return false;
+            return _context.Entry(lesson).State == EntityState.Added || lesson.Id == 0;
+        }
     }
 }

@@ -49,12 +49,11 @@ namespace Learning_Management_System.Services
 
             entry.Reload();
 
-            // Detach brudnych zmian, aby uniknąć konfliktów przy Reload
-            var changedEnrollments = _db.ChangeTracker.Entries<Enrollment>()
-                .Where(e => e.Entity.GroupId == group.Id &&
-                           (e.State == EntityState.Added || e.State == EntityState.Deleted || e.State == EntityState.Modified))
+            // Detach ALL Enrollment entities for this group (not just modified ones) to ensure clean reload
+            var allEnrollments = _db.ChangeTracker.Entries<Enrollment>()
+                .Where(e => e.Entity.GroupId == group.Id)
                 .ToList();
-            foreach (var e in changedEnrollments) e.State = EntityState.Detached;
+            foreach (var e in allEnrollments) e.State = EntityState.Detached;
 
             var changedSchedules = _db.ChangeTracker.Entries<GroupSchedule>()
                 .Where(e => e.Entity.GroupId == group.Id &&
@@ -62,8 +61,15 @@ namespace Learning_Management_System.Services
                 .ToList();
             foreach (var s in changedSchedules) s.State = EntityState.Detached;
 
-            entry.Collection(g => g.Enrollments).Load();
+            // Clear the Enrollments collection first to ensure clean reload
+            if (group.Enrollments != null)
+            {
+                group.Enrollments.Clear();
+            }
+
+            // Reload the Enrollments collection with fresh data from database
             _db.Entry(group).Collection(g => g.Enrollments).Query().Include(e => e.Student).Load();
+
             entry.Collection(g => g.Schedules).Load();
         }
 
