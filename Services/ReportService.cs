@@ -24,30 +24,32 @@ namespace Learning_Management_System.Services
             var attendances = await _db.Attendances
                 .Include(a => a.Lesson)
                     .ThenInclude(l => l.Group)
+                .Include(a => a.Student)
                 .Where(a => a.Lesson.Status == LessonStatus.Completed &&
                            a.Lesson.StartTime >= start &&
                            a.Lesson.StartTime <= end)
+                .OrderBy(a => a.Lesson.StartTime)
+                .ThenBy(a => a.Student.LastName)
                 .ToListAsync();
 
-            var totalRevenue = attendances.Sum(a => a.PriceCharged);
-
-            var revenueByGroup = attendances
-                .GroupBy(a => a.Lesson.Group.Name)
-                .Select(g => new RevenueByGroupDto
-                {
-                    GroupName = g.Key,
-                    Revenue = g.Sum(a => a.PriceCharged),
-                    LessonCount = g.Select(a => a.LessonId).Distinct().Count()
-                })
-                .ToList();
+            var transactions = attendances.Select(a => new RevenueTransactionDto
+            {
+                AttendanceId = a.Id,
+                LessonId = a.LessonId,
+                LessonDate = a.Lesson.StartTime.Date,
+                GroupName = a.Lesson.Group.Name,
+                StudentName = a.Student.FullName,
+                PriceCharged = a.PriceCharged,
+                Status = a.Status
+            }).ToList();
 
             return new RevenueReportDto
             {
                 StartDate = start,
                 EndDate = end,
-                TotalRevenue = totalRevenue,
+                TotalRevenue = attendances.Sum(a => a.PriceCharged),
                 TotalLessons = attendances.Select(a => a.LessonId).Distinct().Count(),
-                RevenueByGroup = revenueByGroup
+                Transactions = transactions
             };
         }
 
@@ -56,20 +58,22 @@ namespace Learning_Management_System.Services
             var attendances = await _db.Attendances
                 .Include(a => a.Student)
                 .Include(a => a.Lesson)
+                    .ThenInclude(l => l.Group)
                 .Where(a => a.Lesson.StartTime >= start && a.Lesson.StartTime <= end)
+                .OrderBy(a => a.Lesson.StartTime)
+                .ThenBy(a => a.Student.LastName)
                 .ToListAsync();
 
-            var attendanceByStudent = attendances
-                .GroupBy(a => a.Student)
-                .Select(g => new AttendanceByStudentDto
-                {
-                    StudentName = g.Key.FullName,
-                    Present = g.Count(a => a.Status == AttendanceStatus.Present),
-                    AbsentPaid = g.Count(a => a.Status == AttendanceStatus.AbsentPaid),
-                    AbsentFree = g.Count(a => a.Status == AttendanceStatus.AbsentFree),
-                    Late = g.Count(a => a.Status == AttendanceStatus.Late)
-                })
-                .ToList();
+            var entries = attendances.Select(a => new AttendanceEntryDto
+            {
+                AttendanceId = a.Id,
+                LessonId = a.LessonId,
+                LessonDate = a.Lesson.StartTime.Date,
+                GroupName = a.Lesson.Group.Name,
+                StudentName = a.Student.FullName,
+                Status = a.Status,
+                PriceCharged = a.PriceCharged
+            }).ToList();
 
             return new AttendanceReportDto
             {
@@ -79,46 +83,71 @@ namespace Learning_Management_System.Services
                 TotalAbsentPaid = attendances.Count(a => a.Status == AttendanceStatus.AbsentPaid),
                 TotalAbsentFree = attendances.Count(a => a.Status == AttendanceStatus.AbsentFree),
                 TotalLate = attendances.Count(a => a.Status == AttendanceStatus.Late),
-                AttendanceByStudent = attendanceByStudent
+                Entries = entries
             };
         }
 
         public async Task<WalletReportDto> GenerateWalletReportAsync()
         {
-            var wallets = await _paymentService.GetAllWalletsAsync();
-            var students = await _db.Students
-                .Where(s => s.IsActive)
+            var payments = await _db.Payments
+                .Include(p => p.Student)
+                .OrderBy(p => p.Date)
+                .ThenBy(p => p.Student.LastName)
                 .ToListAsync();
 
-            var studentWallets = new List<StudentWalletDto>();
+            var charges = await _db.Attendances
+                .Include(a => a.Student)
+                .Include(a => a.Lesson)
+                .Where(a => a.Lesson.Status == LessonStatus.Completed)
+                .OrderBy(a => a.Lesson.StartTime)
+                .ThenBy(a => a.Student.LastName)
+                .ToListAsync();
 
-            foreach (var student in students)
+            var transactions = new List<WalletTransactionDto>();
+
+            // Add all payments
+            foreach (var payment in payments)
             {
-                var balance = wallets.GetValueOrDefault(student.Id, 0);
-                
-                var totalPayments = await _db.Payments
-                    .Where(p => p.StudentId == student.Id)
-                    .SumAsync(p => p.Amount);
-
-                var totalCharges = await _db.Attendances
-                    .Include(a => a.Lesson)
-                    .Where(a => a.StudentId == student.Id && a.Lesson.Status == LessonStatus.Completed)
-                    .SumAsync(a => a.PriceCharged);
-
-                studentWallets.Add(new StudentWalletDto
+                transactions.Add(new WalletTransactionDto
                 {
-                    StudentName = student.FullName,
-                    Balance = balance,
-                    TotalPayments = totalPayments,
-                    TotalCharges = totalCharges
+                    TransactionId = payment.Id,
+                    TransactionType = "Payment",
+                    TransactionDate = payment.Date,
+                    StudentName = payment.Student.FullName,
+                    Amount = payment.Amount,
+                    Description = payment.Description ?? "Wpłata",
+                    PaymentId = payment.Id
                 });
             }
 
+            // Add all charges
+            foreach (var charge in charges)
+            {
+                transactions.Add(new WalletTransactionDto
+                {
+                    TransactionId = charge.Id,
+                    TransactionType = "Charge",
+                    TransactionDate = charge.Lesson.StartTime.Date,
+                    StudentName = charge.Student.FullName,
+                    Amount = -charge.PriceCharged, // Negative for charges
+                    Description = $"Opłata za lekcję - {charge.Lesson.Group.Name}",
+                    LessonId = charge.LessonId
+                });
+            }
+
+            // Sort by date
+            transactions = transactions.OrderBy(t => t.TransactionDate).ThenBy(t => t.StudentName).ToList();
+
+            var wallets = await _paymentService.GetAllWalletsAsync();
+            var totalPositive = wallets.Values.Where(b => b > 0).Sum();
+            var totalNegative = wallets.Values.Where(b => b < 0).Sum();
+
             return new WalletReportDto
             {
-                StudentWallets = studentWallets,
-                TotalPositiveBalance = studentWallets.Where(w => w.Balance > 0).Sum(w => w.Balance),
-                TotalNegativeBalance = studentWallets.Where(w => w.Balance < 0).Sum(w => w.Balance)
+                GeneratedDate = DateTime.Now,
+                TotalPositiveBalance = totalPositive,
+                TotalNegativeBalance = totalNegative,
+                Transactions = transactions
             };
         }
 
@@ -126,21 +155,22 @@ namespace Learning_Management_System.Services
         {
             var lessons = await _db.Lessons
                 .Include(l => l.Group)
+                .Include(l => l.Attendances)
                 .Where(l => l.StartTime >= start && l.StartTime <= end)
+                .OrderBy(l => l.StartTime)
                 .ToListAsync();
 
-            var lessonsByGroup = lessons
-                .GroupBy(l => l.Group.Name)
-                .Select(g => new LessonByGroupDto
-                {
-                    GroupName = g.Key,
-                    Total = g.Count(),
-                    Completed = g.Count(l => l.Status == LessonStatus.Completed),
-                    Scheduled = g.Count(l => l.Status == LessonStatus.Scheduled),
-                    Canceled = g.Count(l => l.Status == LessonStatus.Canceled),
-                    Holiday = g.Count(l => l.Status == LessonStatus.Holiday)
-                })
-                .ToList();
+            var lessonEntries = lessons.Select(l => new LessonEntryDto
+            {
+                LessonId = l.Id,
+                LessonDate = l.StartTime.Date,
+                StartTime = l.StartTime,
+                EndTime = l.EndTime,
+                GroupName = l.Group.Name,
+                Status = l.Status,
+                Note = l.Note,
+                AttendanceCount = l.Attendances.Count
+            }).ToList();
 
             return new LessonReportDto
             {
@@ -151,7 +181,7 @@ namespace Learning_Management_System.Services
                 ScheduledLessons = lessons.Count(l => l.Status == LessonStatus.Scheduled),
                 CanceledLessons = lessons.Count(l => l.Status == LessonStatus.Canceled),
                 HolidayLessons = lessons.Count(l => l.Status == LessonStatus.Holiday),
-                LessonsByGroup = lessonsByGroup
+                Lessons = lessonEntries
             };
         }
     }

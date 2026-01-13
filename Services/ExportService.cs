@@ -17,6 +17,92 @@ namespace Learning_Management_System.Services
             QuestPDF.Settings.License = LicenseType.Community;
         }
 
+        #region Helper Styles & Logic
+        private static IContainer HeaderCellStyle(IContainer container)
+        {
+            return container.Background(Colors.Grey.Lighten4)
+                            .DefaultTextStyle(x => x.Bold().FontSize(10))
+                            .PaddingVertical(8)
+                            .PaddingHorizontal(5)
+                            .BorderBottom(2)
+                            .BorderColor(Colors.Grey.Darken2);
+        }
+
+        private static IContainer RowStyle(IContainer container, bool isAlternate = false)
+        {
+            var style = container.BorderBottom(0.5f)
+                            .BorderColor(Colors.Grey.Lighten2)
+                            .PaddingVertical(6)
+                            .PaddingHorizontal(5);
+            
+            if (isAlternate)
+            {
+                style = style.Background(Colors.Grey.Lighten5);
+            }
+            
+            return style;
+        }
+
+        private static IContainer SummaryBoxStyle(IContainer container)
+        {
+            return container.Border(1)
+                            .BorderColor(Colors.Grey.Lighten1)
+                            .Background(Colors.Grey.Lighten5)
+                            .Padding(12);
+        }
+
+        // Helper method to get color for attendance status
+        private QuestPDF.Infrastructure.Color GetAttendanceStatusColor(AttendanceStatus status)
+        {
+            return status switch
+            {
+                AttendanceStatus.Present => Colors.Green.Medium,
+                AttendanceStatus.AbsentPaid => Colors.Orange.Medium,
+                AttendanceStatus.AbsentFree => Colors.Red.Medium,
+                AttendanceStatus.Late => Colors.Blue.Medium,
+                _ => Colors.Grey.Medium
+            };
+        }
+
+        // Helper method to get color for lesson status
+        private QuestPDF.Infrastructure.Color GetLessonStatusColor(LessonStatus status)
+        {
+            return status switch
+            {
+                LessonStatus.Completed => Colors.Green.Medium,
+                LessonStatus.Scheduled => Colors.Blue.Medium,
+                LessonStatus.Canceled => Colors.Red.Medium,
+                LessonStatus.Holiday => Colors.Orange.Medium,
+                _ => Colors.Grey.Medium
+            };
+        }
+
+        // Helper method to translate status to Polish
+        private string GetStatusText(AttendanceStatus status)
+        {
+            return status switch
+            {
+                AttendanceStatus.Present => "Obecny",
+                AttendanceStatus.AbsentPaid => "Nieobecny (płatny)",
+                AttendanceStatus.AbsentFree => "Nieobecny (bezpłatny)",
+                AttendanceStatus.Late => "Spóźniony",
+                _ => status.ToString()
+            };
+        }
+
+        private string GetStatusText(LessonStatus status)
+        {
+            return status switch
+            {
+                LessonStatus.Completed => "Zakończona",
+                LessonStatus.Scheduled => "Zaplanowana",
+                LessonStatus.Canceled => "Anulowana",
+                LessonStatus.Holiday => "Święto",
+                _ => status.ToString()
+            };
+        }
+        #endregion
+
         public async Task ExportToPdfAsync(RevenueReportDto report, string filePath)
         {
             await Task.Run(() =>
@@ -27,33 +113,91 @@ namespace Learning_Management_System.Services
                     {
                         page.Size(PageSizes.A4);
                         page.Margin(2, Unit.Centimetre);
-                        page.DefaultTextStyle(x => x.FontSize(10));
+                        page.DefaultTextStyle(x => x.FontSize(9).FontFamily(Fonts.Calibri));
 
-                        page.Header()
-                            .Text("Raport przychodów")
-                            .FontSize(20)
-                            .Bold()
-                            .AlignCenter();
-
-                        page.Content()
-                            .Column(column =>
+                        page.Header().Row(row =>
+                        {
+                            row.RelativeItem().Column(col =>
                             {
-                                column.Item().Text($"Okres: {report.StartDate:dd.MM.yyyy} - {report.EndDate:dd.MM.yyyy}");
-                                column.Item().PaddingTop(10).Text($"Całkowity przychód: {report.TotalRevenue:F2} PLN").Bold();
-                                column.Item().Text($"Liczba lekcji: {report.TotalLessons}");
+                                col.Item().Text("RAPORT PRZYCHODÓW").FontSize(22).Bold().FontColor(Colors.Blue.Darken2);
+                                col.Item().PaddingTop(5).Text($"Okres: {report.StartDate:dd.MM.yyyy} - {report.EndDate:dd.MM.yyyy}").FontSize(11).FontColor(Colors.Grey.Darken1);
+                            });
+                            row.AutoItem().AlignRight().Column(col =>
+                            {
+                                col.Item().Text(DateTime.Now.ToString("dd.MM.yyyy HH:mm")).FontSize(9).FontColor(Colors.Grey.Medium);
+                                col.Item().Text("ScholarFlow").FontSize(8).Italic().FontColor(Colors.Grey.Medium);
+                            });
+                        });
 
-                                if (report.RevenueByGroup.Any())
+                        page.Content().PaddingVertical(15).Column(column =>
+                        {
+                            // Summary boxes
+                            column.Item().PaddingBottom(20).Row(row =>
+                            {
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
                                 {
-                                    column.Item().PaddingTop(20).Text("Przychód według grup:").Bold();
-                                    foreach (var group in report.RevenueByGroup)
-                                    {
-                                        column.Item().PaddingTop(5).Text($"  {group.GroupName}: {group.Revenue:F2} PLN ({group.LessonCount} lekcji)");
-                                    }
+                                    c.Item().Text("CAŁKOWITY PRZYCHÓD").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.TotalRevenue:F2} PLN").FontSize(18).Bold().FontColor(Colors.Green.Darken2);
+                                });
+                                row.ConstantItem(15);
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
+                                {
+                                    c.Item().Text("LICZBA LEKCJI").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.TotalLessons}").FontSize(18).Bold().FontColor(Colors.Blue.Darken2);
+                                });
+                            });
+
+                            // Table
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(columns =>
+                                {
+                                    columns.ConstantColumn(75);
+                                    columns.RelativeColumn(2);
+                                    columns.RelativeColumn(2);
+                                    columns.ConstantColumn(100);
+                                    columns.ConstantColumn(90);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Element(HeaderCellStyle).Text("Data lekcji");
+                                    header.Cell().Element(HeaderCellStyle).Text("Grupa");
+                                    header.Cell().Element(HeaderCellStyle).Text("Uczeń");
+                                    header.Cell().Element(HeaderCellStyle).Text("Status");
+                                    header.Cell().Element(HeaderCellStyle).AlignRight().Text("Kwota");
+                                });
+
+                                int rowIndex = 0;
+                                foreach (var transaction in report.Transactions)
+                                {
+                                    bool isAlternate = rowIndex % 2 == 1;
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text($"{transaction.LessonDate:dd.MM.yyyy}");
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text(transaction.GroupName);
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text(transaction.StudentName);
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text(GetStatusText(transaction.Status))
+                                         .FontColor(GetAttendanceStatusColor(transaction.Status));
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).AlignRight()
+                                         .Text($"{transaction.PriceCharged:F2} PLN").FontColor(Colors.Green.Darken1).Bold();
+                                    rowIndex++;
                                 }
                             });
+                        });
+                        
+                        page.Footer().Row(row =>
+                        {
+                            row.RelativeItem().Text($"Wygenerowano: {DateTime.Now:dd.MM.yyyy HH:mm}").FontSize(8).FontColor(Colors.Grey.Medium);
+                            row.AutoItem().AlignRight().Text(x =>
+                            {
+                                x.DefaultTextStyle(TextStyle.Default.FontSize(8).FontColor(Colors.Grey.Medium));
+                                x.Span("Strona ");
+                                x.CurrentPageNumber();
+                                x.Span(" z ");
+                                x.TotalPages();
+                            });
+                        });
                     });
                 });
-
                 document.GeneratePdf(filePath);
             });
         }
@@ -68,37 +212,103 @@ namespace Learning_Management_System.Services
                     {
                         page.Size(PageSizes.A4);
                         page.Margin(2, Unit.Centimetre);
-                        page.DefaultTextStyle(x => x.FontSize(10));
+                        page.DefaultTextStyle(x => x.FontSize(9).FontFamily(Fonts.Calibri));
 
-                        page.Header()
-                            .Text("Raport frekwencji")
-                            .FontSize(20)
-                            .Bold()
-                            .AlignCenter();
-
-                        page.Content()
-                            .Column(column =>
+                        page.Header().Row(row =>
+                        {
+                            row.RelativeItem().Column(col =>
                             {
-                                column.Item().Text($"Okres: {report.StartDate:dd.MM.yyyy} - {report.EndDate:dd.MM.yyyy}");
-                                column.Item().PaddingTop(10).Text("Podsumowanie:").Bold();
-                                column.Item().Text($"  Obecni: {report.TotalPresent}");
-                                column.Item().Text($"  Nieobecni (płatne): {report.TotalAbsentPaid}");
-                                column.Item().Text($"  Nieobecni (darmowe): {report.TotalAbsentFree}");
-                                column.Item().Text($"  Spóźnieni: {report.TotalLate}");
+                                col.Item().Text("RAPORT FREKWENCJI").FontSize(22).Bold().FontColor(Colors.Teal.Darken2);
+                                col.Item().PaddingTop(5).Text($"Okres: {report.StartDate:dd.MM.yyyy} - {report.EndDate:dd.MM.yyyy}").FontSize(11).FontColor(Colors.Grey.Darken1);
+                            });
+                            row.AutoItem().AlignRight().Column(col =>
+                            {
+                                col.Item().Text(DateTime.Now.ToString("dd.MM.yyyy HH:mm")).FontSize(9).FontColor(Colors.Grey.Medium);
+                                col.Item().Text("ScholarFlow").FontSize(8).Italic().FontColor(Colors.Grey.Medium);
+                            });
+                        });
 
-                                if (report.AttendanceByStudent.Any())
+                        page.Content().PaddingVertical(15).Column(column =>
+                        {
+                            // Summary boxes
+                            column.Item().PaddingBottom(20).Row(row =>
+                            {
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
                                 {
-                                    column.Item().PaddingTop(20).Text("Frekwencja według uczniów:").Bold();
-                                    foreach (var student in report.AttendanceByStudent)
-                                    {
-                                        column.Item().PaddingTop(5).Text($"  {student.StudentName}:");
-                                        column.Item().Text($"    Obecni: {student.Present}, Nieobecni (płatne): {student.AbsentPaid}, Nieobecni (darmowe): {student.AbsentFree}, Spóźnieni: {student.Late}");
-                                    }
+                                    c.Item().Text("OBECNI").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.TotalPresent}").FontSize(18).Bold().FontColor(Colors.Green.Darken2);
+                                });
+                                row.ConstantItem(10);
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
+                                {
+                                    c.Item().Text("NIEOBECNI (PŁATNE)").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.TotalAbsentPaid}").FontSize(18).Bold().FontColor(Colors.Orange.Darken2);
+                                });
+                                row.ConstantItem(10);
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
+                                {
+                                    c.Item().Text("NIEOBECNI (BEZPŁATNE)").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.TotalAbsentFree}").FontSize(18).Bold().FontColor(Colors.Red.Darken2);
+                                });
+                                row.ConstantItem(10);
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
+                                {
+                                    c.Item().Text("SPÓŹNIENI").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.TotalLate}").FontSize(18).Bold().FontColor(Colors.Blue.Darken2);
+                                });
+                            });
+
+                            // Table
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(columns =>
+                                {
+                                    columns.ConstantColumn(75);
+                                    columns.RelativeColumn(2);
+                                    columns.RelativeColumn(2);
+                                    columns.ConstantColumn(120);
+                                    columns.ConstantColumn(90);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Element(HeaderCellStyle).Text("Data lekcji");
+                                    header.Cell().Element(HeaderCellStyle).Text("Grupa");
+                                    header.Cell().Element(HeaderCellStyle).Text("Uczeń");
+                                    header.Cell().Element(HeaderCellStyle).Text("Status");
+                                    header.Cell().Element(HeaderCellStyle).AlignRight().Text("Opłata");
+                                });
+
+                                int rowIndex = 0;
+                                foreach (var entry in report.Entries)
+                                {
+                                    bool isAlternate = rowIndex % 2 == 1;
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text($"{entry.LessonDate:dd.MM.yyyy}");
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text(entry.GroupName);
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text(entry.StudentName);
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text(GetStatusText(entry.Status))
+                                         .FontColor(GetAttendanceStatusColor(entry.Status)).Bold();
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).AlignRight()
+                                         .Text($"{entry.PriceCharged:F2} PLN").FontColor(Colors.Grey.Darken1);
+                                    rowIndex++;
                                 }
                             });
+                        });
+
+                        page.Footer().Row(row =>
+                        {
+                            row.RelativeItem().Text($"Wygenerowano: {DateTime.Now:dd.MM.yyyy HH:mm}").FontSize(8).FontColor(Colors.Grey.Medium);
+                            row.AutoItem().AlignRight().Text(x =>
+                            {
+                                x.DefaultTextStyle(TextStyle.Default.FontSize(8).FontColor(Colors.Grey.Medium));
+                                x.Span("Strona ");
+                                x.CurrentPageNumber();
+                                x.Span(" z ");
+                                x.TotalPages();
+                            });
+                        });
                     });
                 });
-
                 document.GeneratePdf(filePath);
             });
         }
@@ -113,35 +323,94 @@ namespace Learning_Management_System.Services
                     {
                         page.Size(PageSizes.A4);
                         page.Margin(2, Unit.Centimetre);
-                        page.DefaultTextStyle(x => x.FontSize(10));
+                        page.DefaultTextStyle(x => x.FontSize(9).FontFamily(Fonts.Calibri));
 
-                        page.Header()
-                            .Text("Raport portfeli uczniów")
-                            .FontSize(20)
-                            .Bold()
-                            .AlignCenter();
-
-                        page.Content()
-                            .Column(column =>
+                        page.Header().Row(row =>
+                        {
+                            row.RelativeItem().Column(col =>
                             {
-                                column.Item().Text($"Data wygenerowania: {report.GeneratedDate:dd.MM.yyyy HH:mm}");
-                                column.Item().PaddingTop(10).Text($"Całkowity dodatni bilans: {report.TotalPositiveBalance:F2} PLN").Bold();
-                                column.Item().Text($"Całkowity ujemny bilans: {report.TotalNegativeBalance:F2} PLN").Bold();
+                                col.Item().Text("RAPORT FINANSOWY UCZNIÓW").FontSize(22).Bold().FontColor(Colors.DeepPurple.Darken2);
+                                col.Item().PaddingTop(5).Text($"Wygenerowano: {report.GeneratedDate:dd.MM.yyyy HH:mm}").FontSize(11).FontColor(Colors.Grey.Darken1);
+                            });
+                            row.AutoItem().AlignRight().Column(col =>
+                            {
+                                col.Item().Text(DateTime.Now.ToString("dd.MM.yyyy HH:mm")).FontSize(9).FontColor(Colors.Grey.Medium);
+                                col.Item().Text("ScholarFlow").FontSize(8).Italic().FontColor(Colors.Grey.Medium);
+                            });
+                        });
 
-                                if (report.StudentWallets.Any())
+                        page.Content().PaddingVertical(15).Column(column =>
+                        {
+                            // Summary boxes
+                            column.Item().PaddingBottom(20).Row(row =>
+                            {
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
                                 {
-                                    column.Item().PaddingTop(20).Text("Portfele uczniów:").Bold();
-                                    foreach (var wallet in report.StudentWallets)
-                                    {
-                                        column.Item().PaddingTop(5).Text($"  {wallet.StudentName}:");
-                                        column.Item().Text($"    Bilans: {wallet.Balance:F2} PLN");
-                                        column.Item().Text($"    Wpłaty: {wallet.TotalPayments:F2} PLN, Opłaty: {wallet.TotalCharges:F2} PLN");
-                                    }
+                                    c.Item().Text("DODATNI BILANS").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.TotalPositiveBalance:F2} PLN").FontSize(18).Bold().FontColor(Colors.Green.Darken2);
+                                });
+                                row.ConstantItem(15);
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
+                                {
+                                    c.Item().Text("UJEMNY BILANS").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.TotalNegativeBalance:F2} PLN").FontSize(18).Bold().FontColor(Colors.Red.Darken2);
+                                });
+                            });
+
+                            // Table
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(columns =>
+                                {
+                                    columns.ConstantColumn(75);
+                                    columns.ConstantColumn(85);
+                                    columns.RelativeColumn(2);
+                                    columns.ConstantColumn(95);
+                                    columns.RelativeColumn(2);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Element(HeaderCellStyle).Text("Data");
+                                    header.Cell().Element(HeaderCellStyle).Text("Typ");
+                                    header.Cell().Element(HeaderCellStyle).Text("Uczeń");
+                                    header.Cell().Element(HeaderCellStyle).AlignRight().Text("Kwota");
+                                    header.Cell().Element(HeaderCellStyle).PaddingLeft(5).Text("Opis");
+                                });
+
+                                int rowIndex = 0;
+                                foreach (var transaction in report.Transactions)
+                                {
+                                    bool isAlternate = rowIndex % 2 == 1;
+                                    var amountColor = transaction.Amount >= 0 ? Colors.Green.Darken2 : Colors.Red.Darken2;
+                                    var typeColor = transaction.TransactionType == "Payment" ? Colors.Green.Medium : Colors.Red.Medium;
+
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text($"{transaction.TransactionDate:dd.MM.yyyy}");
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text(transaction.TransactionType == "Payment" ? "Wpłata" : "Opłata")
+                                         .FontColor(typeColor).Bold();
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text(transaction.StudentName);
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).AlignRight()
+                                         .Text($"{transaction.Amount:F2} PLN").FontColor(amountColor).Bold();
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).PaddingLeft(5).Text(transaction.Description).FontSize(8);
+                                    rowIndex++;
                                 }
                             });
+                        });
+
+                        page.Footer().Row(row =>
+                        {
+                            row.RelativeItem().Text($"Wygenerowano: {DateTime.Now:dd.MM.yyyy HH:mm}").FontSize(8).FontColor(Colors.Grey.Medium);
+                            row.AutoItem().AlignRight().Text(x =>
+                            {
+                                x.DefaultTextStyle(TextStyle.Default.FontSize(8).FontColor(Colors.Grey.Medium));
+                                x.Span("Strona ");
+                                x.CurrentPageNumber();
+                                x.Span(" z ");
+                                x.TotalPages();
+                            });
+                        });
                     });
                 });
-
                 document.GeneratePdf(filePath);
             });
         }
@@ -156,42 +425,119 @@ namespace Learning_Management_System.Services
                     {
                         page.Size(PageSizes.A4);
                         page.Margin(2, Unit.Centimetre);
-                        page.DefaultTextStyle(x => x.FontSize(10));
+                        page.DefaultTextStyle(x => x.FontSize(9).FontFamily(Fonts.Calibri));
 
-                        page.Header()
-                            .Text("Raport lekcji")
-                            .FontSize(20)
-                            .Bold()
-                            .AlignCenter();
-
-                        page.Content()
-                            .Column(column =>
+                        page.Header().Row(row =>
+                        {
+                            row.RelativeItem().Column(col =>
                             {
-                                column.Item().Text($"Okres: {report.StartDate:dd.MM.yyyy} - {report.EndDate:dd.MM.yyyy}");
-                                column.Item().PaddingTop(10).Text("Podsumowanie:").Bold();
-                                column.Item().Text($"  Wszystkie lekcje: {report.TotalLessons}");
-                                column.Item().Text($"  Zakończone: {report.CompletedLessons}");
-                                column.Item().Text($"  Zaplanowane: {report.ScheduledLessons}");
-                                column.Item().Text($"  Anulowane: {report.CanceledLessons}");
-                                column.Item().Text($"  Święta: {report.HolidayLessons}");
+                                col.Item().Text("SZCZEGÓŁOWY WYKAZ LEKCJI").FontSize(22).Bold().FontColor(Colors.Grey.Darken3);
+                                col.Item().PaddingTop(5).Text($"Okres: {report.StartDate:dd.MM.yyyy} - {report.EndDate:dd.MM.yyyy}").FontSize(11).FontColor(Colors.Grey.Darken1);
+                            });
+                            row.AutoItem().AlignRight().Column(col =>
+                            {
+                                col.Item().Text(DateTime.Now.ToString("dd.MM.yyyy HH:mm")).FontSize(9).FontColor(Colors.Grey.Medium);
+                                col.Item().Text("ScholarFlow").FontSize(8).Italic().FontColor(Colors.Grey.Medium);
+                            });
+                        });
 
-                                if (report.LessonsByGroup.Any())
+                        page.Content().PaddingVertical(15).Column(column =>
+                        {
+                            // Summary boxes
+                            column.Item().PaddingBottom(20).Row(row =>
+                            {
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
                                 {
-                                    column.Item().PaddingTop(20).Text("Lekcje według grup:").Bold();
-                                    foreach (var group in report.LessonsByGroup)
+                                    c.Item().Text("WSZYSTKIE").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.TotalLessons}").FontSize(18).Bold().FontColor(Colors.Grey.Darken2);
+                                });
+                                row.ConstantItem(10);
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
+                                {
+                                    c.Item().Text("ZAKOŃCZONE").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.CompletedLessons}").FontSize(18).Bold().FontColor(Colors.Green.Darken2);
+                                });
+                                row.ConstantItem(10);
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
+                                {
+                                    c.Item().Text("ZAPLANOWANE").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.ScheduledLessons}").FontSize(18).Bold().FontColor(Colors.Blue.Darken2);
+                                });
+                                row.ConstantItem(10);
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
+                                {
+                                    c.Item().Text("ANULOWANE").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.CanceledLessons}").FontSize(18).Bold().FontColor(Colors.Red.Darken2);
+                                });
+                                row.ConstantItem(10);
+                                row.RelativeItem().Element(SummaryBoxStyle).Column(c =>
+                                {
+                                    c.Item().Text("ŚWIĘTA").FontSize(9).FontColor(Colors.Grey.Darken1);
+                                    c.Item().PaddingTop(3).Text($"{report.HolidayLessons}").FontSize(18).Bold().FontColor(Colors.Orange.Darken2);
+                                });
+                            });
+
+                            // Table
+                            column.Item().Table(table =>
+                            {
+                                table.ColumnsDefinition(columns =>
+                                {
+                                    columns.ConstantColumn(75);
+                                    columns.ConstantColumn(85);
+                                    columns.RelativeColumn(2);
+                                    columns.ConstantColumn(100);
+                                    columns.ConstantColumn(60);
+                                });
+
+                                table.Header(header =>
+                                {
+                                    header.Cell().Element(HeaderCellStyle).Text("Data");
+                                    header.Cell().Element(HeaderCellStyle).Text("Godzina");
+                                    header.Cell().Element(HeaderCellStyle).Text("Grupa");
+                                    header.Cell().Element(HeaderCellStyle).Text("Status");
+                                    header.Cell().Element(HeaderCellStyle).AlignRight().Text("Frekw.");
+                                });
+
+                                int rowIndex = 0;
+                                foreach (var lesson in report.Lessons)
+                                {
+                                    bool isAlternate = rowIndex % 2 == 1;
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text($"{lesson.LessonDate:dd.MM.yyyy}");
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text($"{lesson.StartTime:HH:mm}-{lesson.EndTime:HH:mm}");
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text(lesson.GroupName);
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).Text(GetStatusText(lesson.Status))
+                                         .FontColor(GetLessonStatusColor(lesson.Status)).Bold();
+                                    table.Cell().Element(c => RowStyle(c, isAlternate)).AlignRight().Text($"{lesson.AttendanceCount}");
+                                    
+                                    if (!string.IsNullOrEmpty(lesson.Note))
                                     {
-                                        column.Item().PaddingTop(5).Text($"  {group.GroupName}:");
-                                        column.Item().Text($"    Wszystkie: {group.Total}, Zakończone: {group.Completed}, Zaplanowane: {group.Scheduled}, Anulowane: {group.Canceled}, Święta: {group.Holiday}");
+                                        table.Cell().ColumnSpan(5).PaddingLeft(10).PaddingTop(2).PaddingBottom(5)
+                                             .Text($"Notatka: {lesson.Note}").FontSize(8).Italic().FontColor(Colors.Grey.Medium);
                                     }
+                                    rowIndex++;
                                 }
                             });
+                        });
+
+                        page.Footer().Row(row =>
+                        {
+                            row.RelativeItem().Text($"Wygenerowano: {DateTime.Now:dd.MM.yyyy HH:mm}").FontSize(8).FontColor(Colors.Grey.Medium);
+                            row.AutoItem().AlignRight().Text(x =>
+                            {
+                                x.DefaultTextStyle(TextStyle.Default.FontSize(8).FontColor(Colors.Grey.Medium));
+                                x.Span("Strona ");
+                                x.CurrentPageNumber();
+                                x.Span(" z ");
+                                x.TotalPages();
+                            });
+                        });
                     });
                 });
-
                 document.GeneratePdf(filePath);
             });
         }
 
+        #region CSV Exports
         public async Task ExportToCsvAsync(RevenueReportDto report, string filePath)
         {
             await Task.Run(() =>
@@ -202,10 +548,10 @@ namespace Learning_Management_System.Services
                 writer.WriteLine($"Całkowity przychód,{report.TotalRevenue.ToString("F2", CultureInfo.InvariantCulture)} PLN");
                 writer.WriteLine($"Liczba lekcji,{report.TotalLessons}");
                 writer.WriteLine();
-                writer.WriteLine("Grupa,Przychód,Liczba lekcji");
-                foreach (var group in report.RevenueByGroup)
+                writer.WriteLine("ID,Data lekcji,Grupa,Uczeń,Status,Kwota,ID Lekcji");
+                foreach (var transaction in report.Transactions)
                 {
-                    writer.WriteLine($"{group.GroupName},{group.Revenue.ToString("F2", CultureInfo.InvariantCulture)},{group.LessonCount}");
+                    writer.WriteLine($"{transaction.AttendanceId},{transaction.LessonDate:dd.MM.yyyy},{transaction.GroupName},{transaction.StudentName},{transaction.Status},{transaction.PriceCharged.ToString("F2", CultureInfo.InvariantCulture)},{transaction.LessonId}");
                 }
             });
         }
@@ -222,10 +568,10 @@ namespace Learning_Management_System.Services
                 writer.WriteLine($"Nieobecni (darmowe),{report.TotalAbsentFree}");
                 writer.WriteLine($"Spóźnieni,{report.TotalLate}");
                 writer.WriteLine();
-                writer.WriteLine("Uczeń,Obecni,Nieobecni (płatne),Nieobecni (darmowe),Spóźnieni");
-                foreach (var student in report.AttendanceByStudent)
+                writer.WriteLine("ID,Data lekcji,Grupa,Uczeń,Status,Opłata,ID Lekcji");
+                foreach (var entry in report.Entries)
                 {
-                    writer.WriteLine($"{student.StudentName},{student.Present},{student.AbsentPaid},{student.AbsentFree},{student.Late}");
+                    writer.WriteLine($"{entry.AttendanceId},{entry.LessonDate:dd.MM.yyyy},{entry.GroupName},{entry.StudentName},{entry.Status},{entry.PriceCharged.ToString("F2", CultureInfo.InvariantCulture)},{entry.LessonId}");
                 }
             });
         }
@@ -240,10 +586,10 @@ namespace Learning_Management_System.Services
                 writer.WriteLine($"Całkowity dodatni bilans,{report.TotalPositiveBalance.ToString("F2", CultureInfo.InvariantCulture)} PLN");
                 writer.WriteLine($"Całkowity ujemny bilans,{report.TotalNegativeBalance.ToString("F2", CultureInfo.InvariantCulture)} PLN");
                 writer.WriteLine();
-                writer.WriteLine("Uczeń,Bilans,Wpłaty,Opłaty");
-                foreach (var wallet in report.StudentWallets)
+                writer.WriteLine("ID,Data,Typ,Uczeń,Kwota,Opis,ID Lekcji,ID Płatności");
+                foreach (var transaction in report.Transactions)
                 {
-                    writer.WriteLine($"{wallet.StudentName},{wallet.Balance.ToString("F2", CultureInfo.InvariantCulture)},{wallet.TotalPayments.ToString("F2", CultureInfo.InvariantCulture)},{wallet.TotalCharges.ToString("F2", CultureInfo.InvariantCulture)}");
+                    writer.WriteLine($"{transaction.TransactionId},{transaction.TransactionDate:dd.MM.yyyy},{transaction.TransactionType},{transaction.StudentName},{transaction.Amount.ToString("F2", CultureInfo.InvariantCulture)},{transaction.Description},{transaction.LessonId?.ToString() ?? ""},{transaction.PaymentId?.ToString() ?? ""}");
                 }
             });
         }
@@ -261,12 +607,13 @@ namespace Learning_Management_System.Services
                 writer.WriteLine($"Anulowane,{report.CanceledLessons}");
                 writer.WriteLine($"Święta,{report.HolidayLessons}");
                 writer.WriteLine();
-                writer.WriteLine("Grupa,Wszystkie,Zakończone,Zaplanowane,Anulowane,Święta");
-                foreach (var group in report.LessonsByGroup)
+                writer.WriteLine("ID,Data,Godzina rozpoczęcia,Godzina zakończenia,Grupa,Status,Frekwencja,Notatka");
+                foreach (var lesson in report.Lessons)
                 {
-                    writer.WriteLine($"{group.GroupName},{group.Total},{group.Completed},{group.Scheduled},{group.Canceled},{group.Holiday}");
+                    writer.WriteLine($"{lesson.LessonId},{lesson.LessonDate:dd.MM.yyyy},{lesson.StartTime:HH:mm},{lesson.EndTime:HH:mm},{lesson.GroupName},{lesson.Status},{lesson.AttendanceCount},\"{lesson.Note ?? ""}\"");
                 }
             });
         }
+        #endregion
     }
 }

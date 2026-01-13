@@ -38,13 +38,14 @@ namespace Learning_Management_System.ViewModels
 
             Lessons = new ObservableCollection<Lesson>();
             Groups = new ObservableCollection<Group>();
-            // First add null to represent "All" groups
+            
+            // Dodanie grup
             Groups.Add(null!);
-            // Then add all actual groups
             foreach (var group in _groupService.GetAllGroups())
             {
                 Groups.Add(group);
             }
+
             SelectedLessonAttendances = new ObservableCollection<AttendanceViewModel>();
             AllStatuses = Enum.GetValues(typeof(LessonStatus)).Cast<LessonStatus>().ToList();
             AllAttendanceStatuses = Enum.GetValues(typeof(AttendanceStatus)).Cast<AttendanceStatus>().ToList();
@@ -54,14 +55,18 @@ namespace Learning_Management_System.ViewModels
             CancelAttendancesCommand = new RelayCommand(o => CancelAttendancesChanges(), o => IsDirty && SelectedLesson != null);
             CompleteLessonReportCommand = new RelayCommand(async o => await CompleteLessonReportAsync(), o => SelectedLesson != null && CanCompleteReport());
             ToggleFiltersPopupCommand = new RelayCommand(o => IsFiltersPopupVisible = !IsFiltersPopupVisible);
+            ResetFiltersCommand = new RelayCommand(async o => await ResetFiltersAsync());
 
-            // Set default date range to last 30 days and next 30 days
-            FilterStartDate = DateTime.Today.AddDays(-30);
-            FilterEndDate = DateTime.Today.AddDays(30);
+            // Blokujemy wyzwalanie LoadLessonsAsync podczas ustawiania domyślnych wartości w konstruktorze
+            _isInternalUpdate = true;
             
-            // Set default to "All" (null)
+            FilterStartDate = DateTime.Today.AddDays(-30);
+            FilterEndDate = DateTime.Today;
             SelectedGroupFilter = null;
+            
+            _isInternalUpdate = false;
 
+            // Ładujemy dane tylko raz na samym końcu startu
             _ = LoadLessonsAsync();
         }
 
@@ -124,7 +129,7 @@ namespace Learning_Management_System.ViewModels
                 if (_selectedGroupFilter == value) return;
                 _selectedGroupFilter = value;
                 OnPropertyChanged();
-                _ = LoadLessonsAsync();
+                if (!_isInternalUpdate) _ = LoadLessonsAsync();
             }
         }
 
@@ -136,7 +141,7 @@ namespace Learning_Management_System.ViewModels
                 if (_selectedStatusFilter == value) return;
                 _selectedStatusFilter = value;
                 OnPropertyChanged();
-                _ = LoadLessonsAsync();
+                if (!_isInternalUpdate) _ = LoadLessonsAsync();
             }
         }
 
@@ -148,7 +153,7 @@ namespace Learning_Management_System.ViewModels
                 if (_filterStartDate == value) return;
                 _filterStartDate = value;
                 OnPropertyChanged();
-                _ = LoadLessonsAsync();
+                if (!_isInternalUpdate) _ = LoadLessonsAsync();
             }
         }
 
@@ -160,7 +165,7 @@ namespace Learning_Management_System.ViewModels
                 if (_filterEndDate == value) return;
                 _filterEndDate = value;
                 OnPropertyChanged();
-                _ = LoadLessonsAsync();
+                if (!_isInternalUpdate) _ = LoadLessonsAsync();
             }
         }
 
@@ -172,7 +177,7 @@ namespace Learning_Management_System.ViewModels
                 if (_showMissingAttendanceOnly == value) return;
                 _showMissingAttendanceOnly = value;
                 OnPropertyChanged();
-                _ = LoadLessonsAsync();
+                if (!_isInternalUpdate) _ = LoadLessonsAsync();
             }
         }
 
@@ -206,16 +211,17 @@ namespace Learning_Management_System.ViewModels
         public ICommand SelectLessonCommand { get; }
         public ICommand CancelAttendancesCommand { get; }
         public ICommand CompleteLessonReportCommand { get; }
+        public ICommand ResetFiltersCommand { get; }
 
         public async Task LoadLessonsAsync()
         {
             var startDate = FilterStartDate ?? DateTime.MinValue;
-            var endDate = FilterEndDate ?? DateTime.MaxValue;
+            var endDate = FilterEndDate.HasValue 
+                ? FilterEndDate.Value.Date.AddDays(1).AddTicks(-1) 
+                : DateTime.MaxValue;
 
             var lessons = await _lessonService.GetLessonsForDateRangeAsync(startDate, endDate);
 
-            // Apply filters
-            // SelectedGroupFilter is null when "All" is selected
             if (SelectedGroupFilter != null)
             {
                 lessons = lessons.Where(l => l.GroupId == SelectedGroupFilter.Id);
@@ -238,7 +244,6 @@ namespace Learning_Management_System.ViewModels
             {
                 Lessons.Add(lesson);
             }
-
         }
 
         private void SelectLesson(Lesson? lesson)
@@ -254,14 +259,9 @@ namespace Learning_Management_System.ViewModels
             if (SelectedLesson == null || SelectedLesson.Group == null)
                 return;
 
-            // Get existing attendances
             var existingAttendances = await _attendanceService.GetAttendancesByLessonAsync(SelectedLesson.Id);
-            var existingStudentIds = existingAttendances.Select(a => a.StudentId).ToHashSet();
-
-            // Get all enrolled students
             var enrolledStudents = SelectedLesson.Group.Enrollments.Select(e => e.Student).ToList();
 
-            // Create attendance view models for all enrolled students
             foreach (var student in enrolledStudents)
             {
                 var existingAttendance = existingAttendances.FirstOrDefault(a => a.StudentId == student.Id);
@@ -283,7 +283,6 @@ namespace Learning_Management_System.ViewModels
                 SelectedLessonAttendances.Add(attendanceVM);
             }
 
-            // Calculate prices for all attendances
             CalculateAttendancePrices();
         }
 
@@ -295,24 +294,13 @@ namespace Learning_Management_System.ViewModels
             foreach (var attendanceVM in SelectedLessonAttendances)
             {
                 decimal price = 0;
-
                 if (attendanceVM.Status == AttendanceStatus.Present || attendanceVM.Status == AttendanceStatus.AbsentPaid)
                 {
-                    // Get enrollment to check for individual rate
                     var enrollment = SelectedLesson.Group.Enrollments
                         .FirstOrDefault(e => e.StudentId == attendanceVM.Student.Id);
 
-                    if (enrollment?.IndividualRate.HasValue == true)
-                    {
-                        price = enrollment.IndividualRate.Value;
-                    }
-                    else
-                    {
-                        price = SelectedLesson.Group.BaseRate;
-                    }
+                    price = enrollment?.IndividualRate ?? SelectedLesson.Group.BaseRate;
                 }
-                // None, AbsentFree and Late = 0
-
                 attendanceVM.PriceCharged = price;
             }
         }
@@ -350,17 +338,12 @@ namespace Learning_Management_System.ViewModels
         private bool CanCompleteReport()
         {
             if (SelectedLesson == null) return false;
-            
-            // If lesson is Holiday or Canceled, allow completion without attendance requirements
             if (SelectedLesson.Status == LessonStatus.Holiday || SelectedLesson.Status == LessonStatus.Canceled)
             {
                 return true;
             }
             
-            // For other statuses, check if all enrolled students have attendance with valid status (not None)
             var enrolledCount = SelectedLesson.Group?.Enrollments?.Count ?? 0;
-            
-            // All students should have attendance records with valid status (not None)
             return enrolledCount == SelectedLessonAttendances.Count && 
                    SelectedLessonAttendances.All(a => a.Status != AttendanceStatus.None);
         }
@@ -369,19 +352,14 @@ namespace Learning_Management_System.ViewModels
         {
             if (SelectedLesson == null) return;
 
-            // For Holiday or Canceled status, allow completion without attendance validation
             bool isHolidayOrCanceled = SelectedLesson.Status == LessonStatus.Holiday || SelectedLesson.Status == LessonStatus.Canceled;
-            
-            // Check if all students have attendance set (not None)
             bool allAttendancesSet = CanCompleteReport();
             
-            // If all attendances are set and status is not Holiday/Canceled, automatically set to Completed
             if (allAttendancesSet && !isHolidayOrCanceled)
             {
                 SelectedLesson.Status = LessonStatus.Completed;
             }
             
-            // Validate all students have attendance (not None) only if not Holiday/Canceled
             if (!isHolidayOrCanceled && !allAttendancesSet)
             {
                 MessageBox.Show("Wszyscy uczniowie muszą mieć uzupełnioną frekwencję przed zakończeniem raportu lekcji.", 
@@ -389,28 +367,37 @@ namespace Learning_Management_System.ViewModels
                 return;
             }
 
-            // Save attendances
             await SaveAttendancesAsync();
-
-            // Save lesson status along with attendances
             await _lessonService.UpdateLessonAsync(SelectedLesson);
 
-            // Update wallets from lesson (only if lesson is completed)
             if (SelectedLesson.Status == LessonStatus.Completed)
             {
                 await _paymentService.UpdateWalletsFromLessonAsync(SelectedLesson.Id);
             }
 
-            // Reload lesson to refresh UI
             await LoadLessonsAsync();
             
-            // Reselect the lesson to refresh UI
             var lessonId = SelectedLesson.Id;
             SelectedLesson = null;
             SelectedLesson = Lessons.FirstOrDefault(l => l.Id == lessonId);
 
             MessageBox.Show("Raport lekcji został ukończony. Portfele uczniów zostały zaktualizowane.", 
                 "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private async Task ResetFiltersAsync()
+        {
+            _isInternalUpdate = true; 
+
+            SelectedGroupFilter = null;
+            SelectedStatusFilter = null;
+            ShowMissingAttendanceOnly = false;
+            FilterStartDate = DateTime.Today.AddDays(-30);
+            FilterEndDate = DateTime.Today;
+
+            _isInternalUpdate = false;
+            
+            await LoadLessonsAsync();
         }
     }
 

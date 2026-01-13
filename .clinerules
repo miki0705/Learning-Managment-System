@@ -1,0 +1,28 @@
+# LMS Project Rules & Standards
+
+You are an expert .NET 9 developer specialized in WPF, Clean Architecture, and modern C# patterns.
+
+## Tech Stack & Context
+- **Framework**: .NET 9 (WPF).
+- **UI Library**: Material Design in XAML.
+- **MVVM Pattern**: Using 'CommunityToolkit.Mvvm' exclusively. No logic in code-behind files.
+- **Database**: Entity Framework Core (Async operations only).
+- **AI Heritage**: This project is developed using AI tools including Gemini, Cursor, Cline, and Roo Code (local LLMs).
+
+## Coding Guidelines
+- **Modern C#**: Use Primary Constructors (C# 12+) for dependency injection in classes and ViewModels.
+- **Asynchrony**: All I/O and database operations must be asynchronous using Task/ValueTask.
+- **Formatting**: Use file-scoped namespaces to reduce indentation.
+- **Validation**: Ensure robust input validation for prices, dates, and student records.
+
+## Documentation & Assets
+- **Image Extensions**: All screenshots and diagrams must use the uppercase '.PNG' extension.
+- **GitHub README**: Center all images horizontally using the following HTML structure:
+  <p align="center">
+    <img src="docs/filename.PNG" width="50%" />
+  </p>
+
+## Behavior Rules
+- Always verify the project structure before proposing changes.
+- Ensure that marking attendance triggers automatic balance updates as per the business logic.
+- Maintain data consistency across future lessons when schedule changes occur.

@@ -9,14 +9,18 @@ namespace Learning_Management_System.Models
         public DateTime EndDate { get; set; }
         public decimal TotalRevenue { get; set; }
         public int TotalLessons { get; set; }
-        public List<RevenueByGroupDto> RevenueByGroup { get; set; } = new();
+        public List<RevenueTransactionDto> Transactions { get; set; } = new();
     }
 
-    public class RevenueByGroupDto
+    public class RevenueTransactionDto
     {
+        public int AttendanceId { get; set; }
+        public int LessonId { get; set; }
+        public DateTime LessonDate { get; set; }
         public string GroupName { get; set; } = string.Empty;
-        public decimal Revenue { get; set; }
-        public int LessonCount { get; set; }
+        public string StudentName { get; set; } = string.Empty;
+        public decimal PriceCharged { get; set; }
+        public AttendanceStatus Status { get; set; }
     }
 
     public class AttendanceReportDto
@@ -27,32 +31,38 @@ namespace Learning_Management_System.Models
         public int TotalAbsentPaid { get; set; }
         public int TotalAbsentFree { get; set; }
         public int TotalLate { get; set; }
-        public List<AttendanceByStudentDto> AttendanceByStudent { get; set; } = new();
+        public List<AttendanceEntryDto> Entries { get; set; } = new();
     }
 
-    public class AttendanceByStudentDto
+    public class AttendanceEntryDto
     {
+        public int AttendanceId { get; set; }
+        public int LessonId { get; set; }
+        public DateTime LessonDate { get; set; }
+        public string GroupName { get; set; } = string.Empty;
         public string StudentName { get; set; } = string.Empty;
-        public int Present { get; set; }
-        public int AbsentPaid { get; set; }
-        public int AbsentFree { get; set; }
-        public int Late { get; set; }
+        public AttendanceStatus Status { get; set; }
+        public decimal PriceCharged { get; set; }
     }
 
     public class WalletReportDto
     {
         public DateTime GeneratedDate { get; set; } = DateTime.Now;
-        public List<StudentWalletDto> StudentWallets { get; set; } = new();
         public decimal TotalPositiveBalance { get; set; }
         public decimal TotalNegativeBalance { get; set; }
+        public List<WalletTransactionDto> Transactions { get; set; } = new();
     }
 
-    public class StudentWalletDto
+    public class WalletTransactionDto
     {
+        public int TransactionId { get; set; }
+        public string TransactionType { get; set; } = string.Empty; // "Payment" or "Charge"
+        public DateTime TransactionDate { get; set; }
         public string StudentName { get; set; } = string.Empty;
-        public decimal Balance { get; set; }
-        public decimal TotalPayments { get; set; }
-        public decimal TotalCharges { get; set; }
+        public decimal Amount { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public int? LessonId { get; set; } // For charges
+        public int? PaymentId { get; set; } // For payments
     }
 
     public class LessonReportDto
@@ -64,16 +74,18 @@ namespace Learning_Management_System.Models
         public int ScheduledLessons { get; set; }
         public int CanceledLessons { get; set; }
         public int HolidayLessons { get; set; }
-        public List<LessonByGroupDto> LessonsByGroup { get; set; } = new();
+        public List<LessonEntryDto> Lessons { get; set; } = new();
     }
 
-    public class LessonByGroupDto
+    public class LessonEntryDto
     {
+        public int LessonId { get; set; }
+        public DateTime LessonDate { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
         public string GroupName { get; set; } = string.Empty;
-        public int Total { get; set; }
-        public int Completed { get; set; }
-        public int Scheduled { get; set; }
-        public int Canceled { get; set; }
-        public int Holiday { get; set; }
+        public LessonStatus Status { get; set; }
+        public string? Note { get; set; }
+        public int AttendanceCount { get; set; }
     }
 }
