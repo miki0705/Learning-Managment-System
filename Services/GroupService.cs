@@ -34,7 +34,26 @@ namespace Learning_Management_System.Services
 
         public void DeleteGroup(Group group)
         {
-            _db.Groups.Remove(group);
+            // Ensure related entities are loaded
+            _db.Entry(group).Collection(g => g.Enrollments).Load();
+            _db.Entry(group).Collection(g => g.Schedules).Load();
+            
+            group.IsDeleted = true;
+            _db.Entry(group).State = EntityState.Modified;
+            
+            // Soft delete related Enrollments
+            foreach (var enrollment in group.Enrollments)
+            {
+                enrollment.IsDeleted = true;
+                _db.Entry(enrollment).State = EntityState.Modified;
+            }
+            
+            // Soft delete related GroupSchedules
+            foreach (var schedule in group.Schedules)
+            {
+                schedule.IsDeleted = true;
+                _db.Entry(schedule).State = EntityState.Modified;
+            }
         }
 
         public async Task SaveChangesAsync()

@@ -29,5 +29,7 @@ namespace Learning_Management_System.Models
             get => _endTime;
             set { _endTime = value; OnPropertyChanged(); }
         }
+
+        public bool IsDeleted { get; set; } = false;
     }
 }

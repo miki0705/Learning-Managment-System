@@ -21,13 +21,18 @@ namespace Learning_Management_System.Services
 
         public async Task<RevenueReportDto> GenerateRevenueReportAsync(DateTime start, DateTime end)
         {
+            // Use IgnoreQueryFilters to include soft-deleted records for historical accuracy
             var attendances = await _db.Attendances
+                .IgnoreQueryFilters()
                 .Include(a => a.Lesson)
                     .ThenInclude(l => l.Group)
                 .Include(a => a.Student)
-                .Where(a => a.Lesson.Status == LessonStatus.Completed &&
+                .Where(a => !a.IsDeleted &&
+                           a.Lesson.Status == LessonStatus.Completed &&
                            a.Lesson.StartTime >= start &&
-                           a.Lesson.StartTime <= end)
+                           a.Lesson.StartTime <= end &&
+                           !a.Lesson.IsDeleted &&
+                           !a.Student.IsDeleted)
                 .OrderBy(a => a.Lesson.StartTime)
                 .ThenBy(a => a.Student.LastName)
                 .ToListAsync();
@@ -55,11 +60,17 @@ namespace Learning_Management_System.Services
 
         public async Task<AttendanceReportDto> GenerateAttendanceReportAsync(DateTime start, DateTime end)
         {
+            // Use IgnoreQueryFilters to include soft-deleted records for historical accuracy
             var attendances = await _db.Attendances
+                .IgnoreQueryFilters()
                 .Include(a => a.Student)
                 .Include(a => a.Lesson)
                     .ThenInclude(l => l.Group)
-                .Where(a => a.Lesson.StartTime >= start && a.Lesson.StartTime <= end)
+                .Where(a => !a.IsDeleted &&
+                           a.Lesson.StartTime >= start && 
+                           a.Lesson.StartTime <= end &&
+                           !a.Lesson.IsDeleted &&
+                           !a.Student.IsDeleted)
                 .OrderBy(a => a.Lesson.StartTime)
                 .ThenBy(a => a.Student.LastName)
                 .ToListAsync();
@@ -89,16 +100,24 @@ namespace Learning_Management_System.Services
 
         public async Task<WalletReportDto> GenerateWalletReportAsync()
         {
+            // Use IgnoreQueryFilters to include soft-deleted records for historical accuracy
             var payments = await _db.Payments
+                .IgnoreQueryFilters()
                 .Include(p => p.Student)
+                .Where(p => !p.IsDeleted && !p.Student.IsDeleted)
                 .OrderBy(p => p.Date)
                 .ThenBy(p => p.Student.LastName)
                 .ToListAsync();
 
             var charges = await _db.Attendances
+                .IgnoreQueryFilters()
                 .Include(a => a.Student)
                 .Include(a => a.Lesson)
-                .Where(a => a.Lesson.Status == LessonStatus.Completed)
+                    .ThenInclude(l => l.Group)
+                .Where(a => !a.IsDeleted &&
+                           a.Lesson.Status == LessonStatus.Completed &&
+                           !a.Lesson.IsDeleted &&
+                           !a.Student.IsDeleted)
                 .OrderBy(a => a.Lesson.StartTime)
                 .ThenBy(a => a.Student.LastName)
                 .ToListAsync();
@@ -153,10 +172,15 @@ namespace Learning_Management_System.Services
 
         public async Task<LessonReportDto> GenerateLessonReportAsync(DateTime start, DateTime end)
         {
+            // Use IgnoreQueryFilters to include soft-deleted records for historical accuracy
             var lessons = await _db.Lessons
+                .IgnoreQueryFilters()
                 .Include(l => l.Group)
                 .Include(l => l.Attendances)
-                .Where(l => l.StartTime >= start && l.StartTime <= end)
+                .Where(l => !l.IsDeleted &&
+                           l.StartTime >= start && 
+                           l.StartTime <= end &&
+                           !l.Group.IsDeleted)
                 .OrderBy(l => l.StartTime)
                 .ToListAsync();
 

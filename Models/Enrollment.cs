@@ -12,9 +12,10 @@ namespace Learning_Management_System.Models
         public int StudentId { get; set; }
         public virtual Student Student { get; set; } = null!;
         public int GroupId { get; set; }
-        public virtual Group Group { get; set; }
+        public virtual Group Group { get; set; } = null!;
 
         public decimal? IndividualRate { get; set; }
         public DateTime EnrollmentDate { get; set; } = DateTime.Now;
+        public bool IsDeleted { get; set; } = false;
     }
 }

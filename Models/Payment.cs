@@ -41,5 +41,7 @@ namespace Learning_Management_System.Models
             get => _description;
             set { if (_description == value) return; _description = value; OnPropertyChanged(); }
         }
+
+        public bool IsDeleted { get; set; } = false;
     }
 }

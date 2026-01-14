@@ -41,6 +41,7 @@ namespace Learning_Management_System.Models
         public DateTime JoinedDate { get; set; } = DateTime.Now;
         public bool IsActive { get; set; } = true;
         public DateTime DateOfBirth { get; set; }
+        public bool IsDeleted { get; set; } = false;
 
         public string FullName => $"{FirstName} {LastName}";
 

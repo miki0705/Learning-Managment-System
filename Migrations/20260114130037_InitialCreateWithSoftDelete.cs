@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Learning_Management_System.Migrations
 {
     /// <inheritdoc />
-    public partial class PierwszaWersjaBazy : Migration
+    public partial class InitialCreateWithSoftDelete : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,8 +18,9 @@ namespace Learning_Management_System.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
-                    Level = table.Column<string>(type: "TEXT", nullable: true),
-                    BaseRate = table.Column<decimal>(type: "TEXT", nullable: false)
+                    Level = table.Column<string>(type: "TEXT", nullable: false),
+                    BaseRate = table.Column<decimal>(type: "TEXT", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -38,7 +39,8 @@ namespace Learning_Management_System.Migrations
                     Email = table.Column<string>(type: "TEXT", nullable: true),
                     JoinedDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                     IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    DateOfBirth = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    DateOfBirth = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -53,37 +55,15 @@ namespace Learning_Management_System.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     GroupId = table.Column<int>(type: "INTEGER", nullable: false),
                     DayOfWeek = table.Column<int>(type: "INTEGER", nullable: false),
-                    StartTime = table.Column<TimeSpan>(type: "TEXT", nullable: false),
-                    EndTime = table.Column<TimeSpan>(type: "TEXT", nullable: false)
+                    StartTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    EndTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_GroupSchedules", x => x.Id);
                     table.ForeignKey(
                         name: "FK_GroupSchedules_Groups_GroupId",
-                        column: x => x.GroupId,
-                        principalTable: "Groups",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Lessons",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    GroupId = table.Column<int>(type: "INTEGER", nullable: false),
-                    StartTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    EndTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Note = table.Column<string>(type: "TEXT", nullable: false),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Lessons", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Lessons_Groups_GroupId",
                         column: x => x.GroupId,
                         principalTable: "Groups",
                         principalColumn: "Id",
@@ -99,7 +79,8 @@ namespace Learning_Management_System.Migrations
                     StudentId = table.Column<int>(type: "INTEGER", nullable: false),
                     GroupId = table.Column<int>(type: "INTEGER", nullable: false),
                     IndividualRate = table.Column<decimal>(type: "TEXT", nullable: true),
-                    EnrollmentDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    EnrollmentDate = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -127,7 +108,8 @@ namespace Learning_Management_System.Migrations
                     StudentId = table.Column<int>(type: "INTEGER", nullable: false),
                     Amount = table.Column<decimal>(type: "TEXT", nullable: false),
                     Date = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Description = table.Column<string>(type: "TEXT", nullable: true)
+                    Description = table.Column<string>(type: "TEXT", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -137,7 +119,38 @@ namespace Learning_Management_System.Migrations
                         column: x => x.StudentId,
                         principalTable: "Students",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Lessons",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    GroupId = table.Column<int>(type: "INTEGER", nullable: false),
+                    GroupScheduleId = table.Column<int>(type: "INTEGER", nullable: true),
+                    StartTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    EndTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Note = table.Column<string>(type: "TEXT", nullable: true),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Lessons", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Lessons_GroupSchedules_GroupScheduleId",
+                        column: x => x.GroupScheduleId,
+                        principalTable: "GroupSchedules",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Lessons_Groups_GroupId",
+                        column: x => x.GroupId,
+                        principalTable: "Groups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -149,7 +162,8 @@ namespace Learning_Management_System.Migrations
                     LessonId = table.Column<int>(type: "INTEGER", nullable: false),
                     StudentId = table.Column<int>(type: "INTEGER", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    PriceCharged = table.Column<decimal>(type: "TEXT", nullable: false)
+                    PriceCharged = table.Column<decimal>(type: "TEXT", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -159,13 +173,13 @@ namespace Learning_Management_System.Migrations
                         column: x => x.LessonId,
                         principalTable: "Lessons",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Attendances_Students_StudentId",
                         column: x => x.StudentId,
                         principalTable: "Students",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
@@ -200,6 +214,11 @@ namespace Learning_Management_System.Migrations
                 column: "GroupId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Lessons_GroupScheduleId",
+                table: "Lessons",
+                column: "GroupScheduleId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Payments_StudentId",
                 table: "Payments",
                 column: "StudentId");
@@ -215,9 +234,6 @@ namespace Learning_Management_System.Migrations
                 name: "Enrollments");
 
             migrationBuilder.DropTable(
-                name: "GroupSchedules");
-
-            migrationBuilder.DropTable(
                 name: "Payments");
 
             migrationBuilder.DropTable(
@@ -225,6 +241,9 @@ namespace Learning_Management_System.Migrations
 
             migrationBuilder.DropTable(
                 name: "Students");
+
+            migrationBuilder.DropTable(
+                name: "GroupSchedules");
 
             migrationBuilder.DropTable(
                 name: "Groups");

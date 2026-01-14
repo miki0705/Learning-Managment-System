@@ -78,6 +78,8 @@ namespace Learning_Management_System.Models
 
         public string TimeRange => $"{StartTime:HH:mm} - {EndTime:HH:mm}";
 
+        public bool IsDeleted { get; set; } = false;
+
         public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
     }
 }

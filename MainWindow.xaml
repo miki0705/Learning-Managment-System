@@ -14,11 +14,13 @@
         xml:lang="pl-PL">
 
     <Window.Resources>
+        <helpers:BindingProxy x:Key="Proxy" Data="{Binding}" />
         <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <helpers:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <helpers:DecimalConverter x:Key="DecimalConverter"/>
         <helpers:LessonCardBackgroundConverter x:Key="LessonCardBackgroundConverter"/>
         <helpers:IsPositiveConverter x:Key="IsPositiveConverter"/>
+        <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
 
         <ObjectDataProvider x:Key="DayOfWeekEnum" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
             <ObjectDataProvider.MethodParameters>
@@ -1506,6 +1508,310 @@
                             </ContentControl>
                         </ScrollViewer>
                     </md:Card>
+                </Grid>
+            </TabItem>
+
+            <TabItem IsEnabled="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverted}" 
+                     GotFocus="ArchiveTabItem_GotFocus">
+                <TabItem.Header>
+                    <StackPanel Margin="5">
+                        <md:PackIcon Kind="Archive" HorizontalAlignment="Center" Width="24" Height="24"/>
+                        <TextBlock Text="ARCHIWUM" HorizontalAlignment="Center" FontSize="10"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Filter Tabs -->
+                    <TabControl x:Name="ArchiveTabControl" Grid.Row="0" Margin="0,0,0,10" SelectionChanged="ArchiveTabControl_SelectionChanged">
+                        <TabItem Header="Uczniowie" Tag="Students"/>
+                        <TabItem Header="Grupy" Tag="Groups"/>
+                        <TabItem Header="Lekcje" Tag="Lessons"/>
+                        <TabItem Header="Płatności" Tag="Payments"/>
+                        <TabItem Header="Frekwencja" Tag="Attendances"/>
+                    </TabControl>
+
+                    <!-- Content Area -->
+                    <Grid Grid.Row="1">
+                        <!-- Students Archive -->
+                        <DataGrid ItemsSource="{Binding ArchiveViewModel.ArchivedStudents}"
+                                  Visibility="{Binding ArchiveViewModel.SelectedArchiveType, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Students}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="All"
+                                  AlternatingRowBackground="{DynamicResource MaterialDesignRowHoverBackground}"
+                                  BorderThickness="1"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True">
+                            <DataGrid.Style>
+                                <Style TargetType="DataGrid">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                </Style>
+                            </DataGrid.Style>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Imię" Binding="{Binding FirstName}" Width="*"/>
+                                <DataGridTextColumn Header="Nazwisko" Binding="{Binding LastName}" Width="*"/>
+                                <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
+                                <DataGridTextColumn Header="Telefon" Binding="{Binding PhoneNumber}" Width="*"/>
+                                <DataGridTemplateColumn Header="Akcje" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Przywróć" 
+                                                    Command="{Binding Data.ArchiveViewModel.RestoreStudentCommand, Source={StaticResource Proxy}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- Groups Archive -->
+                        <DataGrid ItemsSource="{Binding ArchiveViewModel.ArchivedGroups}"
+                                  Visibility="{Binding ArchiveViewModel.SelectedArchiveType, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Groups}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="All"
+                                  AlternatingRowBackground="{DynamicResource MaterialDesignRowHoverBackground}"
+                                  BorderThickness="1"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True">
+                            <DataGrid.Style>
+                                <Style TargetType="DataGrid">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                </Style>
+                            </DataGrid.Style>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Nazwa" Binding="{Binding Name}" Width="*"/>
+                                <DataGridTextColumn Header="Poziom" Binding="{Binding Level}" Width="*"/>
+                                <DataGridTextColumn Header="Stawka podstawowa" Binding="{Binding BaseRate, StringFormat={}{0:F2} PLN}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTemplateColumn Header="Akcje" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Przywróć" Command="{Binding DataContext.ArchiveViewModel.RestoreGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                    CommandParameter="{Binding}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- Lessons Archive -->
+                        <DataGrid ItemsSource="{Binding ArchiveViewModel.ArchivedLessons}"
+                                  Visibility="{Binding ArchiveViewModel.SelectedArchiveType, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Lessons}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="All"
+                                  AlternatingRowBackground="{DynamicResource MaterialDesignRowHoverBackground}"
+                                  BorderThickness="1"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True">
+                            <DataGrid.Style>
+                                <Style TargetType="DataGrid">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                </Style>
+                            </DataGrid.Style>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Data" Binding="{Binding StartTime, StringFormat={}{0:dd.MM.yyyy}}" Width="110"/>
+                                <DataGridTextColumn Header="Godzina" Binding="{Binding StartTime, StringFormat={}{0:HH:mm}}" Width="100">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Grupa" Binding="{Binding Group.Name}" Width="*"/>
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status}" Value="Completed">
+                                                    <Setter Property="Foreground" Value="Green"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Scheduled">
+                                                    <Setter Property="Foreground" Value="Blue"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Canceled">
+                                                    <Setter Property="Foreground" Value="Red"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Holiday">
+                                                    <Setter Property="Foreground" Value="Orange"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Notatka" Binding="{Binding Note}" Width="*"/>
+                                <DataGridTemplateColumn Header="Akcje" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Przywróć" Command="{Binding DataContext.ArchiveViewModel.RestoreLessonCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                    CommandParameter="{Binding}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- Payments Archive -->
+                        <DataGrid ItemsSource="{Binding ArchiveViewModel.ArchivedPayments}"
+                                  Visibility="{Binding ArchiveViewModel.SelectedArchiveType, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Payments}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="All"
+                                  AlternatingRowBackground="{DynamicResource MaterialDesignRowHoverBackground}"
+                                  BorderThickness="1"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True">
+                            <DataGrid.Style>
+                                <Style TargetType="DataGrid">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                </Style>
+                            </DataGrid.Style>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Data" Binding="{Binding Date, StringFormat={}{0:dd.MM.yyyy}}" Width="110"/>
+                                <DataGridTextColumn Header="Uczeń" Binding="{Binding Student.FullName}" Width="*"/>
+                                <DataGridTextColumn Header="Kwota" Binding="{Binding Amount, StringFormat={}{0:F2} PLN}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Amount, Converter={StaticResource IsPositiveConverter}}" Value="True">
+                                                    <Setter Property="Foreground" Value="Green"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Opis" Binding="{Binding Description}" Width="*"/>
+                                <DataGridTemplateColumn Header="Akcje" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Przywróć" Command="{Binding DataContext.ArchiveViewModel.RestorePaymentCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                    CommandParameter="{Binding}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- Attendances Archive -->
+                        <DataGrid ItemsSource="{Binding ArchiveViewModel.ArchivedAttendances}"
+                                  Visibility="{Binding ArchiveViewModel.SelectedArchiveType, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Attendances}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="All"
+                                  AlternatingRowBackground="{DynamicResource MaterialDesignRowHoverBackground}"
+                                  BorderThickness="1"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True">
+                            <DataGrid.Style>
+                                <Style TargetType="DataGrid">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                </Style>
+                            </DataGrid.Style>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Data lekcji" Binding="{Binding Lesson.StartTime, StringFormat={}{0:dd.MM.yyyy}}" Width="110"/>
+                                <DataGridTextColumn Header="Uczeń" Binding="{Binding Student.FullName}" Width="*"/>
+                                <DataGridTextColumn Header="Grupa" Binding="{Binding Lesson.Group.Name}" Width="*"/>
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status}" Value="Present">
+                                                    <Setter Property="Foreground" Value="Green"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="AbsentPaid">
+                                                    <Setter Property="Foreground" Value="Orange"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="AbsentFree">
+                                                    <Setter Property="Foreground" Value="Red"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Late">
+                                                    <Setter Property="Foreground" Value="Blue"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Opłata" Binding="{Binding PriceCharged, StringFormat={}{0:F2} PLN}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTemplateColumn Header="Akcje" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Przywróć" Command="{Binding DataContext.ArchiveViewModel.RestoreAttendanceCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                    CommandParameter="{Binding}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
                 </Grid>
             </TabItem>
         </TabControl>

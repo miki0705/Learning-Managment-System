@@ -220,6 +220,7 @@ namespace Learning_Management_System.ViewModels
         public FinanceViewModel FinanceViewModel { get; }
         public LessonBrowserViewModel LessonBrowserViewModel { get; }
         public ReportViewModel ReportViewModel { get; }
+        public ArchiveViewModel ArchiveViewModel { get; }
 
         public ICommand BackupDatabaseCommand { get; }
         public ICommand RestoreDatabaseCommand { get; }
@@ -228,7 +229,7 @@ namespace Learning_Management_System.ViewModels
 
         public MainViewModel(IStudentService studentService, IGroupService groupService, ILessonService lessonService, 
             IPaymentService paymentService, IAttendanceService attendanceService,
-            IReportService reportService, IExportService exportService, IBackupService backupService)
+            IReportService reportService, IExportService exportService, IBackupService backupService, AppDbContext dbContext)
         {
             _studentService = studentService;
             _groupService = groupService;
@@ -240,6 +241,7 @@ namespace Learning_Management_System.ViewModels
             FinanceViewModel = new FinanceViewModel(paymentService, studentService);
             LessonBrowserViewModel = new LessonBrowserViewModel(lessonService, attendanceService, groupService, paymentService);
             ReportViewModel = new ReportViewModel(reportService, exportService);
+            ArchiveViewModel = new ArchiveViewModel(dbContext, studentService, groupService, lessonService, paymentService, attendanceService);
 
             // Subscribe to PropertyChanged events to update IsBlocked when child ViewModels' IsBlocked changes
             FinanceViewModel.PropertyChanged += OnChildViewModelPropertyChanged;
@@ -320,6 +322,28 @@ namespace Learning_Management_System.ViewModels
         {
             CollectionViewSource.GetDefaultView(Students)?.Refresh();
             CollectionViewSource.GetDefaultView(Groups)?.Refresh();
+        }
+
+        public void RefreshStudents()
+        {
+            var newStudents = _studentService.GetAllStudents().ToList();
+            Students.Clear();
+            foreach (var student in newStudents)
+            {
+                Students.Add(student);
+            }
+            RefreshList();
+            OnPropertyChanged(nameof(Students));
+        }
+
+        public void RefreshGroups()
+        {
+            Groups.Clear();
+            foreach (var group in _groupService.GetAllGroups())
+            {
+                Groups.Add(group);
+            }
+            RefreshList();
         }
 
         private void ApplyFilter()

@@ -12,5 +12,6 @@ namespace Learning_Management_System.Models
 
         public AttendanceStatus Status { get; set; }
         public decimal PriceCharged {  get; set; }
+        public bool IsDeleted { get; set; } = false;
     }
 }

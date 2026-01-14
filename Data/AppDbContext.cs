@@ -16,12 +16,10 @@ namespace Learning_Management_System.Data
 
         public AppDbContext()
         {
-            Database.EnsureCreated();
         }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
-            Database.EnsureCreated();
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -39,6 +37,15 @@ namespace Learning_Management_System.Data
 
             // USUNIĘTO: Konwerter TimeSpan na Ticks (powodował błędy przy edycji)
             // Teraz StartTime i EndTime są typem DateTime, który SQLite obsługuje natywnie.
+
+            // Global Query Filters for Soft Delete
+            modelBuilder.Entity<Student>().HasQueryFilter(s => !s.IsDeleted);
+            modelBuilder.Entity<Group>().HasQueryFilter(g => !g.IsDeleted);
+            modelBuilder.Entity<Lesson>().HasQueryFilter(l => !l.IsDeleted);
+            modelBuilder.Entity<Payment>().HasQueryFilter(p => !p.IsDeleted);
+            modelBuilder.Entity<Attendance>().HasQueryFilter(a => !a.IsDeleted);
+            modelBuilder.Entity<Enrollment>().HasQueryFilter(e => !e.IsDeleted);
+            modelBuilder.Entity<GroupSchedule>().HasQueryFilter(gs => !gs.IsDeleted);
 
             modelBuilder.Entity<GroupSchedule>(entity =>
             {
@@ -59,7 +66,7 @@ namespace Learning_Management_System.Data
                 .HasOne(l => l.Group)
                 .WithMany(g => g.Lessons)
                 .HasForeignKey(l => l.GroupId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // Changed to Restrict to preserve historical data
 
             // 3. Relacja Lekcji z Harmonogramem
             modelBuilder.Entity<Lesson>()
@@ -73,21 +80,21 @@ namespace Learning_Management_System.Data
                 .HasOne(a => a.Lesson)
                 .WithMany(l => l.Attendances)
                 .HasForeignKey(a => a.LessonId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // Changed to Restrict to preserve historical data
 
             // 5. Relacja Attendance z Student
             modelBuilder.Entity<Attendance>()
                 .HasOne(a => a.Student)
                 .WithMany(s => s.Attendances)
                 .HasForeignKey(a => a.StudentId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // Changed to Restrict to preserve historical data
 
             // 6. Relacja Payment z Student
             modelBuilder.Entity<Payment>()
                 .HasOne(p => p.Student)
                 .WithMany(s => s.Payments)
                 .HasForeignKey(p => p.StudentId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict); // Changed to Restrict to preserve historical data
         }
     }
 }

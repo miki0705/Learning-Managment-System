@@ -1,9 +1,7 @@
 ﻿using Learning_Management_System.Data;
 using Learning_Management_System.Models;
-using System;
-using Learning_Management_System.Data;
-using Learning_Management_System.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -35,13 +33,10 @@ namespace Learning_Management_System.Services
             _db.Students.Add(student);
         }
 
-        //to w sumie jeszcze nwm jak zrobic do konca, 
-        //czy usuwac na stałe czy tak wyłączac, chyba nie ma to wiekszej roznicy jesli 
-        //is active bedzie go wywalać z UI to user bedzie mogl dodac nowego
         public void DeleteStudent(Student student)
         {
+            student.IsDeleted = true;
             student.IsActive = false;
-            //_db.Students.Remove(student);
         }
         public void SaveChanges()
         {

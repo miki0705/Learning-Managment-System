@@ -27,6 +27,9 @@ namespace Learning_Management_System.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("LessonId")
                         .HasColumnType("INTEGER");
 
@@ -63,6 +66,9 @@ namespace Learning_Management_System.Migrations
                     b.Property<decimal?>("IndividualRate")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("StudentId")
                         .HasColumnType("INTEGER");
 
@@ -85,7 +91,11 @@ namespace Learning_Management_System.Migrations
                     b.Property<decimal>("BaseRate")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Level")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -106,13 +116,16 @@ namespace Learning_Management_System.Migrations
                     b.Property<int>("DayOfWeek")
                         .HasColumnType("INTEGER");
 
-                    b.Property<TimeSpan>("EndTime")
+                    b.Property<DateTime>("EndTime")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("GroupId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<TimeSpan>("StartTime")
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("StartTime")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -134,8 +147,13 @@ namespace Learning_Management_System.Migrations
                     b.Property<int>("GroupId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("GroupScheduleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Note")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("StartTime")
@@ -147,6 +165,8 @@ namespace Learning_Management_System.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("GroupId");
+
+                    b.HasIndex("GroupScheduleId");
 
                     b.ToTable("Lessons");
                 });
@@ -165,6 +185,9 @@ namespace Learning_Management_System.Migrations
 
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("StudentId")
                         .HasColumnType("INTEGER");
@@ -195,6 +218,9 @@ namespace Learning_Management_System.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("JoinedDate")
                         .HasColumnType("TEXT");
 
@@ -215,13 +241,13 @@ namespace Learning_Management_System.Migrations
                     b.HasOne("Learning_Management_System.Models.Lesson", "Lesson")
                         .WithMany("Attendances")
                         .HasForeignKey("LessonId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Learning_Management_System.Models.Student", "Student")
                         .WithMany("Attendances")
                         .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Lesson");
@@ -264,10 +290,17 @@ namespace Learning_Management_System.Migrations
                     b.HasOne("Learning_Management_System.Models.Group", "Group")
                         .WithMany("Lessons")
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Learning_Management_System.Models.GroupSchedule", "GroupSchedule")
+                        .WithMany()
+                        .HasForeignKey("GroupScheduleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Group");
+
+                    b.Navigation("GroupSchedule");
                 });
 
             modelBuilder.Entity("Learning_Management_System.Models.Payment", b =>
@@ -275,7 +308,7 @@ namespace Learning_Management_System.Migrations
                     b.HasOne("Learning_Management_System.Models.Student", "Student")
                         .WithMany("Payments")
                         .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Student");

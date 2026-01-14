@@ -85,7 +85,8 @@ namespace Learning_Management_System.Services
 
             foreach (var attendance in toRemove)
             {
-                _db.Attendances.Remove(attendance);
+                attendance.IsDeleted = true;
+                _db.Entry(attendance).State = EntityState.Modified;
             }
 
             // Add or update attendances
@@ -111,10 +112,11 @@ namespace Learning_Management_System.Services
 
         public async Task DeleteAttendanceAsync(int attendanceId)
         {
-            var attendance = await _db.Attendances.FindAsync(attendanceId);
+            var attendance = await _db.Attendances.IgnoreQueryFilters().FirstOrDefaultAsync(a => a.Id == attendanceId);
             if (attendance != null)
             {
-                _db.Attendances.Remove(attendance);
+                attendance.IsDeleted = true;
+                _db.Entry(attendance).State = EntityState.Modified;
                 await _db.SaveChangesAsync();
             }
         }

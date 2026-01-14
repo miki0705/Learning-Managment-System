@@ -44,6 +44,8 @@ namespace Learning_Management_System.Models
             }
         }
 
+        public bool IsDeleted { get; set; } = false;
+
         public virtual ICollection<GroupSchedule> Schedules { get; set; } = new List<GroupSchedule>();
         public virtual ICollection<Lesson> Lessons { get; set; } = new List<Lesson>();
         public virtual ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();

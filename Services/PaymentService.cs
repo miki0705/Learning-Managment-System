@@ -19,19 +19,24 @@ namespace Learning_Management_System.Services
 
         public async Task<decimal> GetStudentWalletBalanceAsync(int studentId)
         {
-            // Sum of all payments
+            // Use IgnoreQueryFilters to include soft-deleted records for accurate financial calculations
+            // Sum of all payments (including soft-deleted for historical accuracy)
             decimal totalPayments = await _db.Payments
-                .Where(p => p.StudentId == studentId)
+                .IgnoreQueryFilters()
+                .Where(p => p.StudentId == studentId && !p.IsDeleted)
                 .SumAsync(p => p.Amount);
 
-            // Sum of all charges from completed lessons
+            // Sum of all charges from completed lessons (including soft-deleted for historical accuracy)
             decimal totalCharges = await _db.Attendances
+                .IgnoreQueryFilters()
                 .Include(a => a.Lesson)
                     .ThenInclude(l => l.Group)
                 .Include(a => a.Student)
                     .ThenInclude(s => s.Enrollments)
                 .Where(a => a.StudentId == studentId && 
-                           a.Lesson.Status == LessonStatus.Completed)
+                           !a.IsDeleted &&
+                           a.Lesson.Status == LessonStatus.Completed &&
+                           !a.Lesson.IsDeleted)
                 .SumAsync(a => a.PriceCharged);
 
             return totalPayments - totalCharges;
@@ -40,8 +45,9 @@ namespace Learning_Management_System.Services
         public async Task<Dictionary<int, decimal>> GetAllWalletsAsync()
         {
             var wallets = new Dictionary<int, decimal>();
+            // Only calculate wallets for active, non-deleted students
             var studentIds = await _db.Students
-                .Where(s => s.IsActive)
+                .Where(s => s.IsActive && !s.IsDeleted)
                 .Select(s => s.Id)
                 .ToListAsync();
 
@@ -90,22 +96,25 @@ namespace Learning_Management_System.Services
 
         public async Task DeletePaymentAsync(int paymentId)
         {
-            var payment = await _db.Payments.FindAsync(paymentId);
+            var payment = await _db.Payments.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == paymentId);
             if (payment != null)
             {
-                _db.Payments.Remove(payment);
+                payment.IsDeleted = true;
+                _db.Entry(payment).State = EntityState.Modified;
                 await _db.SaveChangesAsync();
             }
         }
 
         public async Task UpdateWalletsFromLessonAsync(int lessonId)
         {
+            // Use IgnoreQueryFilters to access lesson even if soft-deleted (for historical data integrity)
             var lesson = await _db.Lessons
+                .IgnoreQueryFilters()
                 .Include(l => l.Group)
                 .Include(l => l.Attendances)
                     .ThenInclude(a => a.Student)
                         .ThenInclude(s => s.Enrollments)
-                .FirstOrDefaultAsync(l => l.Id == lessonId);
+                .FirstOrDefaultAsync(l => l.Id == lessonId && !l.IsDeleted);
 
             if (lesson == null || lesson.Status != LessonStatus.Completed)
                 return;

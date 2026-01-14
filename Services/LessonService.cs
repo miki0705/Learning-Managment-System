@@ -46,10 +46,11 @@ namespace Learning_Management_System.Services
 
         public async Task DeleteLessonAsync(int lessonId)
         {
-            var lesson = await _context.Lessons.FindAsync(lessonId);
+            var lesson = await _context.Lessons.IgnoreQueryFilters().FirstOrDefaultAsync(l => l.Id == lessonId);
             if (lesson != null)
             {
-                _context.Lessons.Remove(lesson);
+                lesson.IsDeleted = true;
+                _context.Entry(lesson).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
             }
         }
@@ -74,7 +75,12 @@ namespace Learning_Management_System.Services
 
                 if (futureLessons.Any())
                 {
-                    _context.Lessons.RemoveRange(futureLessons);
+                    // Soft delete future scheduled lessons
+                    foreach (var lesson in futureLessons)
+                    {
+                        lesson.IsDeleted = true;
+                        _context.Entry(lesson).State = EntityState.Modified;
+                    }
                     // Zapisujemy zmiany od razu, aby LessonExists nie widział usuwanych lekcji
                     await _context.SaveChangesAsync();
                 }
