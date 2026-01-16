@@ -1540,7 +1540,7 @@
                         <DataGrid ItemsSource="{Binding ArchiveViewModel.ArchivedStudents}"
                                   Visibility="{Binding ArchiveViewModel.SelectedArchiveType, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Students}"
                                   AutoGenerateColumns="False"
-                                  IsReadOnly="True"
+                                  IsReadOnly="False"
                                   HeadersVisibility="Column"
                                   GridLinesVisibility="All"
                                   AlternatingRowBackground="{DynamicResource MaterialDesignRowHoverBackground}"
@@ -1564,13 +1564,13 @@
                                 <DataGridTextColumn Header="Nazwisko" Binding="{Binding LastName}" Width="*"/>
                                 <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
                                 <DataGridTextColumn Header="Telefon" Binding="{Binding PhoneNumber}" Width="*"/>
-                                <DataGridTemplateColumn Header="Akcje" Width="120">
+                                <DataGridTemplateColumn Header="Akcje" Width="120" IsReadOnly="False">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Content="Przywróć" 
-                                                    Command="{Binding Data.ArchiveViewModel.RestoreStudentCommand, Source={StaticResource Proxy}}"
-                                                    CommandParameter="{Binding}"
-                                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                            <Button Content="Przywróć"
+                                                    PreviewMouseDown="RestoreStudent_PreviewMouseDown"
+                                                    IsHitTestVisible="True"
+                                                    Focusable="True" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -1581,7 +1581,7 @@
                         <DataGrid ItemsSource="{Binding ArchiveViewModel.ArchivedGroups}"
                                   Visibility="{Binding ArchiveViewModel.SelectedArchiveType, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Groups}"
                                   AutoGenerateColumns="False"
-                                  IsReadOnly="True"
+                                  IsReadOnly="False"
                                   HeadersVisibility="Column"
                                   GridLinesVisibility="All"
                                   AlternatingRowBackground="{DynamicResource MaterialDesignRowHoverBackground}"
@@ -1613,8 +1613,11 @@
                                 <DataGridTemplateColumn Header="Akcje" Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Content="Przywróć" Command="{Binding DataContext.ArchiveViewModel.RestoreGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                                    CommandParameter="{Binding}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                            <Button Content="Przywróć"
+                                                    PreviewMouseDown="RestoreGroup_PreviewMouseDown"
+                                                    IsHitTestVisible="True"
+                                                    Focusable="True"
+                                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -1625,7 +1628,7 @@
                         <DataGrid ItemsSource="{Binding ArchiveViewModel.ArchivedLessons}"
                                   Visibility="{Binding ArchiveViewModel.SelectedArchiveType, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Lessons}"
                                   AutoGenerateColumns="False"
-                                  IsReadOnly="True"
+                                  IsReadOnly="False"
                                   HeadersVisibility="Column"
                                   GridLinesVisibility="All"
                                   AlternatingRowBackground="{DynamicResource MaterialDesignRowHoverBackground}"
@@ -1683,8 +1686,11 @@
                                 <DataGridTemplateColumn Header="Akcje" Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Content="Przywróć" Command="{Binding DataContext.ArchiveViewModel.RestoreLessonCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                                    CommandParameter="{Binding}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                            <Button Content="Przywróć"
+                                                    PreviewMouseDown="RestoreLesson_PreviewMouseDown"
+                                                    IsHitTestVisible="True"
+                                                    Focusable="True"
+                                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -1695,7 +1701,7 @@
                         <DataGrid ItemsSource="{Binding ArchiveViewModel.ArchivedPayments}"
                                   Visibility="{Binding ArchiveViewModel.SelectedArchiveType, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Payments}"
                                   AutoGenerateColumns="False"
-                                  IsReadOnly="True"
+                                  IsReadOnly="False"
                                   HeadersVisibility="Column"
                                   GridLinesVisibility="All"
                                   AlternatingRowBackground="{DynamicResource MaterialDesignRowHoverBackground}"
@@ -1734,8 +1740,11 @@
                                 <DataGridTemplateColumn Header="Akcje" Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Content="Przywróć" Command="{Binding DataContext.ArchiveViewModel.RestorePaymentCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                                    CommandParameter="{Binding}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                            <Button Content="Przywróć"
+                                                    PreviewMouseDown="RestorePayment_PreviewMouseDown"
+                                                    IsHitTestVisible="True"
+                                                    Focusable="True"
+                                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -1746,7 +1755,7 @@
                         <DataGrid ItemsSource="{Binding ArchiveViewModel.ArchivedAttendances}"
                                   Visibility="{Binding ArchiveViewModel.SelectedArchiveType, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=Attendances}"
                                   AutoGenerateColumns="False"
-                                  IsReadOnly="True"
+                                  IsReadOnly="False"
                                   HeadersVisibility="Column"
                                   GridLinesVisibility="All"
                                   AlternatingRowBackground="{DynamicResource MaterialDesignRowHoverBackground}"
@@ -1804,8 +1813,11 @@
                                 <DataGridTemplateColumn Header="Akcje" Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Content="Przywróć" Command="{Binding DataContext.ArchiveViewModel.RestoreAttendanceCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                                    CommandParameter="{Binding}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                                            <Button Content="Przywróć"
+                                                    PreviewMouseDown="RestoreAttendance_PreviewMouseDown"
+                                                    IsHitTestVisible="True"
+                                                    Focusable="True"
+                                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

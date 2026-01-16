@@ -4,13 +4,13 @@ using System.Windows.Input;
 
 namespace Learning_Management_System.ViewModels
 {
-    public class AsyncRelayCommand : ICommand
+    public class AsyncRelayCommand<T> : ICommand
     {
-        private readonly Func<object?, Task> _execute;
-        private readonly Predicate<object?>? _canExecute;
+        private readonly Func<T?, Task> _execute;
+        private readonly Predicate<T?>? _canExecute;
         private bool _isExecuting;
 
-        public AsyncRelayCommand(Func<object?, Task> execute, Predicate<object?>? canExecute = null)
+        public AsyncRelayCommand(Func<T?, Task> execute, Predicate<T?>? canExecute = null)
         {
             _execute = execute ?? throw new ArgumentNullException(nameof(execute));
             _canExecute = canExecute;
@@ -18,7 +18,7 @@ namespace Learning_Management_System.ViewModels
 
         public bool CanExecute(object? parameter)
         {
-            return !_isExecuting && (_canExecute == null || _canExecute(parameter));
+            return !_isExecuting && (_canExecute == null || _canExecute((T?)parameter));
         }
 
         public async void Execute(object? parameter)
@@ -30,7 +30,7 @@ namespace Learning_Management_System.ViewModels
 
             try
             {
-                await _execute(parameter);
+                await _execute((T?)parameter);
             }
             catch (Exception ex)
             {

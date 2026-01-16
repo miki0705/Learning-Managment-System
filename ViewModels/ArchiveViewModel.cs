@@ -2,11 +2,10 @@ using Learning_Management_System.Data;
 using Learning_Management_System.Models;
 using Learning_Management_System.Services;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -45,106 +44,19 @@ namespace Learning_Management_System.ViewModels
             ArchivedPayments = new ObservableCollection<Payment>();
             ArchivedAttendances = new ObservableCollection<Attendance>();
 
-            RestoreStudentCommand = new AsyncRelayCommand(
-                async o => 
-                {
-                    // #region agent log
-                    try 
-                    { 
-                        var logData = new 
-                        { 
-                            sessionId = "debug-session", 
-                            runId = "run1", 
-                            hypothesisId = "A,C", 
-                            location = "ArchiveViewModel.cs:RestoreStudentCommand", 
-                            message = "Command lambda entry", 
-                            data = new 
-                            { 
-                                parameterType = o?.GetType().Name,
-                                parameterValue = o?.ToString(),
-                                isNull = o == null
-                            }, 
-                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() 
-                        }; 
-                        var json = JsonSerializer.Serialize(logData);
-                        File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", json + Environment.NewLine);
-                        Debug.WriteLine($"[LOG] Command lambda: {json}");
-                    } 
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[LOG ERROR] {ex.Message}");
-                    }
-                    // #endregion
-                    
-                    if (o != null)
-                    {
-                        await RestoreStudentAsync(o as Student ?? (Student)o);
-                    }
-                }, 
-                o => 
-                {
-                    // #region agent log
-                    try 
-                    { 
-                        var logData = new 
-                        { 
-                            sessionId = "debug-session", 
-                            runId = "run1", 
-                            hypothesisId = "C", 
-                            location = "ArchiveViewModel.cs:RestoreStudentCommand.CanExecute", 
-                            message = "CanExecute check", 
-                            data = new 
-                            { 
-                                parameterType = o?.GetType().Name,
-                                isNull = o == null,
-                                result = o != null
-                            }, 
-                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() 
-                        }; 
-                        var json = JsonSerializer.Serialize(logData);
-                        File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", json + Environment.NewLine);
-                    } 
-                    catch { }
-                    // #endregion
-                    
-                    return o != null;
-                });
-            RestoreGroupCommand = new AsyncRelayCommand(
-                async o => 
-                {
-                    if (o != null)
-                    {
-                        await RestoreGroupAsync(o as Group ?? (Group)o);
-                    }
-                }, 
-                o => o != null);
-            RestoreLessonCommand = new AsyncRelayCommand(
-                async o => 
-                {
-                    if (o != null)
-                    {
-                        await RestoreLessonAsync(o as Lesson ?? (Lesson)o);
-                    }
-                }, 
-                o => o != null);
-            RestorePaymentCommand = new AsyncRelayCommand(
-                async o => 
-                {
-                    if (o != null)
-                    {
-                        await RestorePaymentAsync(o as Payment ?? (Payment)o);
-                    }
-                }, 
-                o => o != null);
-            RestoreAttendanceCommand = new AsyncRelayCommand(
-                async o => 
-                {
-                    if (o != null)
-                    {
-                        await RestoreAttendanceAsync(o as Attendance ?? (Attendance)o);
-                    }
-                }, 
-                o => o != null);
+            RestoreStudentCommand = new AsyncRelayCommand<object>(RestoreStudentAsync, _ => true);
+            RestoreGroupCommand = new AsyncRelayCommand<object>(
+                async o => await RestoreGroupAsync(o as Group), 
+                _ => true);
+            RestoreLessonCommand = new AsyncRelayCommand<object>(
+                async o => await RestoreLessonAsync(o as Lesson), 
+                _ => true);
+            RestorePaymentCommand = new AsyncRelayCommand<object>(
+                async o => await RestorePaymentAsync(o as Payment), 
+                _ => true);
+            RestoreAttendanceCommand = new AsyncRelayCommand<object>(
+                async o => await RestoreAttendanceAsync(o as Attendance), 
+                _ => true);
 
             // Initialize with Students tab
             SelectedArchiveType = "Students";
@@ -175,13 +87,6 @@ namespace Learning_Management_System.ViewModels
         public ICommand RestorePaymentCommand { get; }
         public ICommand RestoreAttendanceCommand { get; }
 
-        // Test method to verify command binding
-        public void TestCommandBinding()
-        {
-            // #region agent log
-            try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "B", location = "ArchiveViewModel.cs:55", message = "TestCommandBinding called", data = new { }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + "\n"); } catch { }
-            // #endregion
-        }
 
         public async Task LoadArchivedDataAsync()
         {
@@ -276,97 +181,57 @@ namespace Learning_Management_System.ViewModels
             }
         }
 
-        private async Task RestoreStudentAsync(Student? student)
+        private async Task RestoreStudentAsync(object? parameter)
         {
-            System.Windows.MessageBox.Show("METODA WYWOŁANA!");
-
-            // #region agent log
-            try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "A,B,C", location = "ArchiveViewModel.cs:RestoreStudentAsync", message = "RestoreStudentAsync entry", data = new { studentId = student?.Id ?? -1, studentName = student?.FullName, isNull = student == null }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + Environment.NewLine); } catch { }
-            // #endregion
+            // Extract student from parameter (could be Student or StudentProxy)
+            Student? student = null;
             
-            Debug.WriteLine($"RestoreStudentAsync called with student: {student?.Id ?? -1}");
+            if (parameter is Student directStudent)
+            {
+                student = directStudent;
+            }
+            else if (parameter != null)
+            {
+                // Try to extract Student property if it exists (for StudentProxy)
+                var studentProperty = parameter.GetType().GetProperty("Student");
+                if (studentProperty != null)
+                {
+                    student = studentProperty.GetValue(parameter) as Student;
+                }
+            }
             
             if (student == null)
             {
-                // #region agent log
-                try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "C", location = "ArchiveViewModel.cs:RestoreStudentAsync", message = "Student is null", data = new { }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + Environment.NewLine); } catch { }
-                // #endregion
-                Debug.WriteLine("Student is null, returning");
+                Debug.WriteLine("Student is null or could not be extracted from parameter");
                 return;
             }
 
             try
             {
-                // CRITICAL: Re-fetch the entity using IgnoreQueryFilters() to ensure it's tracked by the context
-                // #region agent log
-                try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "A", location = "ArchiveViewModel.cs:RestoreStudentAsync", message = "Before re-fetching entity", data = new { studentId = student.Id }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + Environment.NewLine); } catch { }
-                // #endregion
-                
+                // Re-fetch the entity using IgnoreQueryFilters() to ensure it's tracked by the context
                 var trackedStudent = await _dbContext.Students
                     .IgnoreQueryFilters()
                     .FirstOrDefaultAsync(s => s.Id == student.Id);
                 
                 if (trackedStudent == null)
                 {
-                    // #region agent log
-                    try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "A", location = "ArchiveViewModel.cs:RestoreStudentAsync", message = "Entity not found in database", data = new { studentId = student.Id }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + Environment.NewLine); } catch { }
-                    // #endregion
                     MessageBox.Show($"Nie znaleziono ucznia o ID {student.Id} w bazie danych.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
                 
-                // #region agent log
-                try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "A", location = "ArchiveViewModel.cs:RestoreStudentAsync", message = "Entity re-fetched, before setting IsDeleted", data = new { studentId = trackedStudent.Id, currentIsDeleted = trackedStudent.IsDeleted, entryState = _dbContext.Entry(trackedStudent).State.ToString() }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + Environment.NewLine); } catch { }
-                // #endregion
-                
                 Debug.WriteLine($"Restoring student ID: {trackedStudent.Id}, Name: {trackedStudent.FullName}");
                 
                 trackedStudent.IsDeleted = false;
-                trackedStudent.IsActive = true; // Also restore IsActive flag
+                trackedStudent.IsActive = true;
                 _dbContext.Entry(trackedStudent).State = EntityState.Modified;
                 
-                // #region agent log
-                try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "A", location = "ArchiveViewModel.cs:RestoreStudentAsync", message = "Before SaveChangesAsync", data = new { studentId = trackedStudent.Id, entryState = _dbContext.Entry(trackedStudent).State.ToString(), isDeleted = trackedStudent.IsDeleted, isActive = trackedStudent.IsActive }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + Environment.NewLine); } catch { }
-                // #endregion
-                
-                int changes = 0;
                 try
                 {
-                    changes = await _dbContext.SaveChangesAsync();
-                    
-                    // #region agent log
-                    try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "A", location = "ArchiveViewModel.cs:RestoreStudentAsync", message = "After SaveChangesAsync", data = new { changesSaved = changes, studentId = trackedStudent.Id, isDeletedAfter = trackedStudent.IsDeleted }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + Environment.NewLine); } catch { }
-                    // #endregion
-                    
+                    int changes = await _dbContext.SaveChangesAsync();
                     Debug.WriteLine($"SaveChangesAsync completed. Changes saved: {changes}");
                 }
                 catch (Exception saveEx)
                 {
-                    // #region agent log
-                    try 
-                    { 
-                        var logData = new 
-                        { 
-                            sessionId = "debug-session", 
-                            runId = "run1", 
-                            hypothesisId = "A", 
-                            location = "ArchiveViewModel.cs:RestoreStudentAsync", 
-                            message = "Exception during SaveChangesAsync", 
-                            data = new 
-                            {
-                                exceptionType = saveEx.GetType().Name,
-                                message = saveEx.Message,
-                                innerException = saveEx.InnerException?.Message,
-                                stackTrace = saveEx.StackTrace,
-                                innerStackTrace = saveEx.InnerException?.StackTrace
-                            }, 
-                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() 
-                        }; 
-                        File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + Environment.NewLine); 
-                    } 
-                    catch { }
-                    // #endregion
-                    
                     var errorMessage = $"Błąd podczas zapisywania zmian: {saveEx.Message}";
                     if (saveEx.InnerException != null)
                     {
@@ -379,17 +244,8 @@ namespace Learning_Management_System.ViewModels
                     return;
                 }
 
-                // Remove from archive collection (use the original student parameter for removal)
-                // #region agent log
-                try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "D", location = "ArchiveViewModel.cs:RestoreStudentAsync", message = "Before removing from collection", data = new { collectionCount = ArchivedStudents.Count, studentId = student.Id }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + Environment.NewLine); } catch { }
-                // #endregion
-                
+                // Remove from archive collection
                 ArchivedStudents.Remove(student);
-                
-                // #region agent log
-                try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "D", location = "ArchiveViewModel.cs:RestoreStudentAsync", message = "After removing from collection", data = new { collectionCount = ArchivedStudents.Count }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + Environment.NewLine); } catch { }
-                // #endregion
-                
                 Debug.WriteLine("Student removed from ArchivedStudents collection");
 
                 // Reload archive data to refresh the list
@@ -397,45 +253,21 @@ namespace Learning_Management_System.ViewModels
                 Debug.WriteLine("Archive data reloaded");
 
                 // Refresh main collections
-                // #region agent log
-                try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "E", location = "ArchiveViewModel.cs:220", message = "Before MainViewModel refresh", data = new { hasMainWindow = Application.Current?.MainWindow != null, dataContextType = Application.Current?.MainWindow?.DataContext?.GetType().Name }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + "\n"); } catch { }
-                // #endregion
-                
                 if (Application.Current?.MainWindow?.DataContext is MainViewModel mainViewModel)
                 {
-                    // #region agent log
-                    try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "E", location = "ArchiveViewModel.cs:224", message = "Calling RefreshStudents", data = new { }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + "\n"); } catch { }
-                    // #endregion
-                    
                     Debug.WriteLine("Calling RefreshStudents on MainViewModel");
                     mainViewModel.RefreshStudents();
-                    
-                    // #region agent log
-                    try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "E", location = "ArchiveViewModel.cs:229", message = "After RefreshStudents", data = new { studentsCount = mainViewModel.Students.Count }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + "\n"); } catch { }
-                    // #endregion
-                    
                     Debug.WriteLine("RefreshStudents completed");
                 }
                 else
                 {
-                    // #region agent log
-                    try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "E", location = "ArchiveViewModel.cs:236", message = "MainViewModel not found", data = new { }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + "\n"); } catch { }
-                    // #endregion
                     Debug.WriteLine("WARNING: Could not find MainViewModel in DataContext");
                 }
 
                 MessageBox.Show("Uczeń został przywrócony.", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
-                
-                // #region agent log
-                try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "A", location = "ArchiveViewModel.cs:243", message = "RestoreStudentAsync success exit", data = new { }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + "\n"); } catch { }
-                // #endregion
             }
             catch (System.Exception ex)
             {
-                // #region agent log
-                try { var logData = new { sessionId = "debug-session", runId = "run1", hypothesisId = "A,E", location = "ArchiveViewModel.cs:248", message = "Exception in RestoreStudentAsync", data = new { exceptionType = ex.GetType().Name, message = ex.Message, stackTrace = ex.StackTrace }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }; File.AppendAllText(@"d:\Work\PersonalProjects\Learning-Managment-System\.cursor\debug.log", JsonSerializer.Serialize(logData) + "\n"); } catch { }
-                // #endregion
-                
                 Debug.WriteLine($"ERROR in RestoreStudentAsync: {ex.Message}");
                 Debug.WriteLine($"Stack trace: {ex.StackTrace}");
                 MessageBox.Show($"Błąd podczas przywracania ucznia: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
